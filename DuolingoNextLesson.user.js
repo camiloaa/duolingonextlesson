@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.3
+// @version     0.4
 // @grant	none
 // @downloadURL  https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
 // @updateURL  https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -36,7 +36,7 @@ function isCurrentCourse(x)
 		x.fromLanguage === duoState.user.fromLanguage;
 }
 
-function readDuoStatus() {
+function readDuoState() {
 	duoState = JSON.parse(localStorage['duo.state']);
 	course_skills = Object.values(duoState.skills).filter(isCurrentCourse);
 	skills = course_skills.filter(skill => skill.accessible == true);
@@ -63,7 +63,7 @@ function updateCrownLevel() {
 	// Calculate the minimum targetCrownLevel
 	var last_skills = skills.filter(skill => skill.row == last_row);
 	var min_crown_level = last_skills.reduce(
-			(acc, skill) => Math.min(acc, skill.finishedLevels), 0);
+			(acc, skill) => Math.min(acc, skill.finishedLevels), 5);
 	course_skills.map(skill => skill.targetCrownLevel = min_crown_level);
 	// Split the rows in 4 groups
 	var level_step = Math.ceil(last_row / 4) * MIN_STEP;
@@ -71,19 +71,20 @@ function updateCrownLevel() {
 	// Increase targetCrownLevel for earlier skills
 	for (i = last_row; i > -level_step; i -= level_step) {
 		skills.filter(skill => skill.row <= Math.max(i, 0)).
-			map(skill => skill.targetCrownLevel = 
-				Math.max(skill.targetCrownLevel + 1, 5));
+			map(skill => skill.targetCrownLevel =
+				Math.min(skill.targetCrownLevel + 1, 5));
 	}
 	skills.map(skill => skill.crownWeight =
-			(1 - skill.finishedLessons/skill.lessons) *
-			(skill.targetCrownLevel - skill.finishedLevels));
+		Math.max(skill.targetCrownLevel - skill.finishedLevels 
+				- skill.finishedLessons/skill.lessons, 0));
 	if (LINEAR_COMPLETION) {
 		for (var i = 1; i < unfinished_skills.length; i++) {
 			// Ignore other unfinished skills
 			unfinished_skills[i].crownWeight = 0;
 		}
 	}
-	var max_weight = skills.reduce( (acc,skill) => acc = Math.max(acc, skill.crownWeight), 0);
+	var max_weight = skills.reduce( (acc,skill) => 
+		acc = Math.max(acc, skill.crownWeight), 0);
 	next_skill = skills.filter(skill => skill.crownWeight == max_weight)[0];
 }
 
@@ -108,15 +109,6 @@ function skillURL(skill) {
 		(1+skill.finishedLessons);
 }
 
-readDuoStatus();
-
-if (course_keys.includes("total_crowns")) {
-    console.debug("DuolingoNextLesson version " + GM_info.script.version
-            + " ready");
-} else {
-	console.debug("No crowns for you yet");
-}
-
 /* Add a "NEXT LESSON" button when necessary */
 function onChange(_) {
 	var sidepanel = document.getElementsByClassName(SIDE_PANEL);
@@ -127,8 +119,19 @@ function onChange(_) {
 	}
 }
 
-new MutationObserver(onChange).observe(document.body, {
-    childList : true,
-    subtree : true
-});
+readDuoState();
+// updateCrownLevel();
+// skills.map(x => res = {w: x.crownWeight, t: x.targetCrownLevel})
+
+if (course_keys.includes("total_crowns")) {
+	new MutationObserver(onChange).observe(document.body, {
+	    childList : true,
+	    subtree : true
+	});
+
+    console.debug("DuolingoNextLesson version " + GM_info.script.version
+            + " ready");
+} else {
+	console.debug("No crowns for you yet");
+}
 
