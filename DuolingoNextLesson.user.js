@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.4
+// @version     0.5
 // @grant	none
 // @downloadURL  https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
 // @updateURL  https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -19,8 +19,10 @@ let MIN_STEP = 1;	// Increase this value to advance faster in the course
 
 let LINEAR_COMPLETION = true; // Complete skills in unlocked rows one after another
 
-let SIDE_PANEL = "_21w25 _1E3L7";
-let GLOBAL_PRACTICE = "_6Hq2p _3FQrh _1uzK0 _3f25b _2arQ0 _3skMI _2ESN4";
+let K_SIDE_PANEL = "_21w25 _1E3L7";
+let K_GLOBAL_PRACTICE = "_6Hq2p _3FQrh _1uzK0 _3f25b _2arQ0 _3skMI _2ESN4";
+let K_DUOTREE = "mAsUf";
+let K_CONFIG_BUTTON = "_3LN9C _3e75V _3f25b _3hso2 _3skMI oNqWF _3hso2 _3skMI";
 
 var duoState = {};
 var course_skills = [];
@@ -89,17 +91,29 @@ function updateCrownLevel() {
 }
 
 function createLessonButton(skill) {
+	var sidepanel = document.getElementsByClassName(K_SIDE_PANEL);
+	var duotree = document.getElementsByClassName(K_DUOTREE)[0];
+	
 	var button = document.createElement("button");
 	button.id = "next-lesson-button";
 	button.type = "button";
 	button.textContent = "START NEW LESSON";
-	button.onclick = function () {window.location.href= skillURL(skill);};
-	button.className = GLOBAL_PRACTICE;
-    button.style = "margin-top: 10px;"
-    	+ "display: block;"
-        + "visibility: visible;";
-	var sidepanel = document.getElementsByClassName(SIDE_PANEL)[0];
-	sidepanel.appendChild(button);
+	button.onclick = function () {
+		window.location.href= skillURL(skill);};
+	if (sidepanel.length > 0) {
+		button.className = K_GLOBAL_PRACTICE;
+	    button.style = "margin-top: 10px;"
+	    	+ "display: block;"
+	        + "visibility: visible;";
+		sidepanel[0].appendChild(button);
+	} else {
+		button.className = K_CONFIG_BUTTON
+			+ " reverse-tree-enhancer-button";
+		button.style = "margin-left: 5px; height: 42px; "
+			+ "display: block;"
+			+ "visibility: visible;";
+		duotree.insertBefore(button, duotree.firstChild);
+	}
 }
 
 function skillURL(skill) {
@@ -111,9 +125,10 @@ function skillURL(skill) {
 
 /* Add a "NEXT LESSON" button when necessary */
 function onChange(_) {
-	var sidepanel = document.getElementsByClassName(SIDE_PANEL);
-	if (document.getElementById("next-lesson-button") == null 
-			&& sidepanel.length != 0) {
+	var duotree = document.getElementsByClassName(K_DUOTREE);
+	if (document.getElementById("next-lesson-button") == null
+			&& duotree.length != 0) {
+		readDuoState();
 		updateCrownLevel();
 		createLessonButton(next_skill);
 	}
