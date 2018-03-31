@@ -3,22 +3,38 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.5
+// @version     0.6
+// @description Add a "START NEW LESSON" button in Duolingo.
 // @grant	none
-// @downloadURL  https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
-// @updateURL  https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
+// @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
+// @updateURL   https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
 // ==/UserScript==
 
-// Configuration constants
-let MIN_STEP = 1;	// Increase this value to advance faster in the course
-					// A value of 1 requires having the first row of the tree
-					// at level 5 before finishing the 5th row of the tree
-					// A value of 2 would require that before row 10
-					// A value of 3 before row 15 and so on.
-					// Values under 1 are not defined
+// Configuration constants: Configure your script here
+// NOTE!!! If you edit the script, you'll have to upgrade it manually
+//
+// STEP = max(STEP_MIN, finishedRows/STEP_DIVIDER)
+// Example settings:
+//		(1, 4, 1) : at least 25% of rows at level 5, at most 25% at level 4 and so on.
+//		(1, 4, 0) : Same as before, but more lessons from new skills
+//		(1, 2, 1) : 50% of finished rows at level 2, 50% at level 3.
+//		(1, 1, 1) : All rows pointing to level 2 until the end of the tree.
+//		(2, 4, 1) : Same as (1, 4, 1) but keep it slow until the first shortcut.
+//		(2, 4, 1) : Same as (1, 4, 1) but keep it slow until the first shortcut.
 
-let LINEAR_COMPLETION = true; // Complete skills in unlocked rows one after another
+let STEP_MIN = 1;		// STEP_MIN > 0
+						// Bigger values => get new lessons more often
+						// Smaller values => reach level 5 before new lessons
+						// Zero (0) is not a valid value!
+let STEP_DIVIDER = 4;	// STEP_DIVIDER > 0
+						// Bigger values => reach level 5 before new lessons
+						// Smaller values => get new lessons more often
+						// Values below 1 make no difference
+let STEP_INITIAL = 1;
 
+let LINEAR_COMPLETION = true; // Complete skills in unlocked rows sequentially
+
+// UI Constants
 let K_SIDE_PANEL = "_21w25 _1E3L7";
 let K_GLOBAL_PRACTICE = "_6Hq2p _3FQrh _1uzK0 _3f25b _2arQ0 _3skMI _2ESN4";
 let K_DUOTREE = "mAsUf";
@@ -64,17 +80,18 @@ function updateCrownLevel() {
 	
 	// Calculate the minimum targetCrownLevel
 	var last_skills = skills.filter(skill => skill.row == last_row);
-	var min_crown_level = last_skills.reduce(
-			(acc, skill) => Math.min(acc, skill.finishedLevels), 5);
-	course_skills.map(skill => skill.targetCrownLevel = min_crown_level);
-	// Split the rows in 4 groups
-	var level_step = Math.ceil(last_row / 4) * MIN_STEP;
+	var target_crown_level = last_skills.reduce(
+			(acc, skill) => Math.min(acc, skill.finishedLevels + 1), 5);
+	course_skills.map(skill => skill.targetCrownLevel = target_crown_level)
+	// Split the rows
+	var level_step = Math.max(last_row / STEP_DIVIDER, STEP_MIN);
 	
 	// Increase targetCrownLevel for earlier skills
-	for (i = last_row; i > -level_step; i -= level_step) {
+	for (i = last_row - STEP_INITIAL;
+		(i >= 0) && (++target_crown_level <= 5);
+		i -= level_step) {
 		skills.filter(skill => skill.row <= Math.max(i, 0)).
-			map(skill => skill.targetCrownLevel =
-				Math.min(skill.targetCrownLevel + 1, 5));
+			map(skill => skill.targetCrownLevel = target_crown_level);
 	}
 	skills.map(skill => skill.crownWeight =
 		Math.max(skill.targetCrownLevel - skill.finishedLevels 
@@ -89,6 +106,13 @@ function updateCrownLevel() {
 		acc = Math.max(acc, skill.crownWeight), 0);
 	next_skill = skills.filter(skill => skill.crownWeight == max_weight)[0];
 }
+
+// This code is here an not at the bottom of the file so I can easily
+// copy-paste the important parts of the script into firefox.
+readDuoState();
+// updateCrownLevel();
+// skills.map(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.finishedLevels})
+// STEP_MIN = 1; STEP_DIVIDER = 4; STEP_INITIAL = 1; LINEAR_COMPLETION = true;
 
 function createLessonButton(skill) {
 	var sidepanel = document.getElementsByClassName(K_SIDE_PANEL);
@@ -133,10 +157,6 @@ function onChange(_) {
 		createLessonButton(next_skill);
 	}
 }
-
-readDuoState();
-// updateCrownLevel();
-// skills.map(x => res = {w: x.crownWeight, t: x.targetCrownLevel})
 
 if (course_keys.includes("total_crowns")) {
 	new MutationObserver(onChange).observe(document.body, {
