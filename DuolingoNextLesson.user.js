@@ -3,8 +3,8 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7
-// @description Add a "START NEW LESSON" button in Duolingo.
+// @version     0.7.1
+// @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
 // @updateURL   https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -169,7 +169,7 @@ function createLessonButton(skill) {
 	var button = document.createElement("button");
 	button.id = "next-lesson-button";
 	button.type = "button";
-	button.textContent = "START NEW LESSON";
+	button.textContent = "Start " + skill.name;
 	button.onclick = function () {
 		window.location.href= skillURL(skill);};
 	if (sidepanel.length > 0) {
@@ -196,7 +196,7 @@ function skillURL(skill) {
 }
 
 /* Add a "NEXT LESSON" button when necessary */
-function onChange(_) {
+function onChangeNextLesson(_) {
 	var duotree = document.getElementsByClassName(K_DUOTREE);
 	if (document.getElementById("next-lesson-button") == null
 			&& duotree.length != 0) {
@@ -207,14 +207,14 @@ function onChange(_) {
 }
 
 if (course_keys.includes("total_crowns")) {
-	new MutationObserver(onChange).observe(document.body, {
+	new MutationObserver(onChangeNextLesson).observe(document.body, {
 	    childList : true,
 	    subtree : true
 	});
 
     console.debug("DuolingoNextLesson version " + GM_info.script.version
             + " ready");
-	onChange();
+	onChangeNextLesson();
 } else {
 	console.debug("No crowns for you yet");
 }
