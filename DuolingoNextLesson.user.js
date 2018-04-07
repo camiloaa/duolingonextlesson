@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7.2
+// @version     0.7.3
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -204,10 +204,11 @@ function skillURL(skill) {
 }
 
 /* Add a "NEXT LESSON" button when necessary */
-function onChangeNextLesson(_) {
+function onChangeNextLesson(mutationsList) {
 	var duotree = document.getElementsByClassName(K_DUOTREE);
 	if (document.getElementById("next-lesson-button") == null
 			&& duotree.length != 0) {
+		console.debug("You need a new button");
 		readDuoState();
 		updateCrownLevel();
 		createLessonButton(next_skill);
