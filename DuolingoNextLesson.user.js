@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7.1
+// @version     0.7.2
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -29,25 +29,29 @@ console.debug(local_config)
 
 // Configuration constants:
 // You can create your own per-course configuration using localStorage.
-//		local_config = {divider: 4, min:1, initial: 1, lineal: 0, sequential: true}
-//		localStorage.setItem('duo.nextlesson.es.en', JSON.stringify(local_config))
+// Copy the next two lines to the console, or uncomment them
+// and reload duolingo's webpage if you don't have access to the console.
+//		let mycfg = {divider: 1, min:1, initial: 0, lineal: -1, sequential: true}
+//		localStorage.setItem('duo.nextlesson.es.en', JSON.stringify(mycfg))
+//
 // In this example, duo.nextlesson.es.en means Spanish for English speakers.
 // Adjust the name for the course you want to configure.
-// You can also change the global settings by modifying the code directly
+//
 // WARNING!!! If you edit the script, you'll have to upgrade it manually
 //
 // STEP = max(STEP_MIN, finishedRows/STEP_DIVIDER)
 // Example settings for (divider, min, initial, lineal):
-//	(4, 1, 1, -1) : 10% of rows at level 5, 20% @ 4, 30% @ 3, 40% @ 2. (DEFAULT)
-//	(4, 1, 1, 0)  : at least 25% of rows at level 5, at most 25% at level 4 and so on.
-//	(3, 1, 0, 0)  : Same as before, but more lessons from new skills
-//	(2, 1, 1, 0)  : 50% of finished rows at level 2, 50% at level 3.
-//	(1, 1, 1, 0)  : All rows pointing to level 2 until the end of the tree.
-//	(4, 2, 1, 0)  : Same as (1, 4, 1) but keep it slow until the first shortcut.
-//	(4, 2, 1, 0)  : Same as (1, 4, 1) but keep it slow until the first shortcut.
+//	(4, 1, 0, -1) : 10% of rows at level 5, 20% @ 4, 30% @ 3, 40% @ 2. (DEFAULT)
+//	(4, 1, 0, 0)  : at least 25% of rows at level 5, at most 25% at level 4 and so on.
+//	(3, 1, -1, 0)  : Same as before, but more lessons from new skills
+//	(2, 1, 0, 0)  : 50% of finished rows at level 2, 50% at level 3.
+//	(1, 1, 0, 0)  : All rows pointing to level 2 until the end of the tree.
+//	(4, 2, 0, 0)  : Same as (1, 4, 1) but keep it slow until the first shortcut.
+//	(4, 2, 0, 0)  : Same as (1, 4, 1) but keep it slow until the first shortcut.
+//	(1, 1, 0, 0)  : Even out a finished tree after crowns upgrade
 
 //Split tree in STEP_DIVIDER sections (STEP_DIVIDER > 0)
-let STEP_DIVIDER = (local_config == null) ? 4:local_config.divider;
+let STEP_DIVIDER = (local_config == null) ? 3:local_config.divider;
 						// Bigger values => reach level 5 before new lessons
 						// Smaller values => get new lessons more often
 						// Values below 1 make no difference
@@ -57,8 +61,8 @@ let STEP_MIN = (local_config == null) ? 1:local_config.min;
 						// Smaller values => reach level 5 before new lessons
 						// Zero (0) is not a valid value!
 // How many rows should cound as "just studied"
-// Set it to 0 to study new lessons before old
-// Set it to a possitive number to study older lessons first
+// Set it to -1 to study new lessons before old
+// Set it to 0 or possitive number to study older lessons first
 let STEP_INITIAL = (local_config == null) ? 1:local_config.initial;
 
 // Set it to -1 to have more new lessons (Default)
@@ -74,6 +78,10 @@ let K_SIDE_PANEL = "_21w25 _1E3L7";
 let K_GLOBAL_PRACTICE = "_6Hq2p _3FQrh _1uzK0 _3f25b _2arQ0 _3skMI _2ESN4";
 let K_DUOTREE = "mAsUf";
 let K_CONFIG_BUTTON = "_3LN9C _3e75V _3f25b _3hso2 _3skMI oNqWF _3hso2 _3skMI";
+
+Array.prototype.randomElement = function () {
+    return this[Math.floor(Math.random() * this.length)]
+}
 
 function isCurrentCourse(x)
 {
@@ -133,9 +141,9 @@ function updateCrownLevel() {
 	}
 	// Increase targetCrownLevel for earlier skills
 	for (i = last_row - STEP_INITIAL;
-		(i >= FIRST_ROW) && (++target_crown_level <= 5);
+		(i > FIRST_ROW) && (++target_crown_level <= 5);
 		i -= current_step) {
-		skills.filter(skill => skill.row <= Math.max(i, 0)).
+		skills.filter(skill => skill.row < Math.max(i, 0)).
 			map(skill => skill.targetCrownLevel = target_crown_level);
 		if (LINEAL != 0) current_step += LINEAL * level_step;
 		current_step = Math.max(current_step, STEP_MIN);
@@ -151,12 +159,12 @@ function updateCrownLevel() {
 	}
 	var max_weight = skills.reduce( (acc,skill) => 
 		acc = Math.max(acc, skill.crownWeight), 0);
-	next_skill = skills.filter(skill => skill.crownWeight == max_weight)[0];
+	next_skill = skills.filter(skill => skill.crownWeight == max_weight).randomElement();
 }
 
 // This dead code is here an not at the bottom of the file so I can easily
 // copy-paste the important parts of the script into firefox.
-// STEP_MIN = 1; STEP_DIVIDER = 4; STEP_INITIAL = 1; SEQUENTIAL_TREE = true; LINEAL = 0
+// STEP_MIN = 1; STEP_DIVIDER = 4; STEP_INITIAL = 0; SEQUENTIAL_TREE = true; LINEAL = 0
 // readDuoState();
 // updateCrownLevel();
 // skills.map(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.finishedLevels})
