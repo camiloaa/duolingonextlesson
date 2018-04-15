@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7.3
+// @version     0.7.5
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -20,19 +20,15 @@ var current_course = {};
 var tree = [];
 var course_keys = [];
 var next_skill = {};
-
-readDuoState();
-let local_config_name = 'duo.nextlesson.' + duoState.user.learningLanguage +
-					'.' + duoState.user.fromLanguage;
-let local_config = JSON.parse(localStorage.getItem(local_config_name));
-console.debug(local_config)
+var local_config = {divider: 3, min:1, initial: 0, lineal: -1,
+		chiq: false, weighted: true, sequential: true};
 
 // Configuration constants:
 // You can create your own per-course configuration using localStorage.
 // Copy the next two lines to the console, or uncomment them
 // and reload duolingo's webpage if you don't have access to the console.
-//		let mycfg = {divider: 1, min:1, initial: 0, lineal: -1, sequential: true}
-//		localStorage.setItem('duo.nextlesson.es.en', JSON.stringify(mycfg))
+//		local_config = {divider: 1, min:1, initial: 0, lineal: -1, normal: true, sequential: true}
+//		localStorage.setItem('duo.nextlesson.es.en', JSON.stringify(local_config))
 //
 // In this example, duo.nextlesson.es.en means Spanish for English speakers.
 // Adjust the name for the course you want to configure.
@@ -50,33 +46,11 @@ console.debug(local_config)
 //	(4, 2, 0, 0)  : Same as (1, 4, 1) but keep it slow until the first shortcut.
 //	(1, 1, 0, 0)  : Even out a finished tree after crowns upgrade
 
-//Split tree in STEP_DIVIDER sections (STEP_DIVIDER > 0)
-let STEP_DIVIDER = (local_config == null) ? 3:local_config.divider;
-						// Bigger values => reach level 5 before new lessons
-						// Smaller values => get new lessons more often
-						// Values below 1 make no difference
-// Minimum size of the section (STEP_MIN > 0)
-let STEP_MIN = (local_config == null) ? 1:local_config.min;
-						// Bigger values => get new lessons more often
-						// Smaller values => reach level 5 before new lessons
-						// Zero (0) is not a valid value!
-// How many rows should cound as "just studied"
-// Set it to -1 to study new lessons before old
-// Set it to 0 or possitive number to study older lessons first
-let STEP_INITIAL = (local_config == null) ? 1:local_config.initial;
-
-// Set it to -1 to have more new lessons (Default)
-// Set it to 0 to study evenly across the tree
-// Set it to 1 to have more older lessons to study
-let LINEAL = (local_config == null) ? -1:local_config.lineal;
-
-//Complete skills in unlocked rows sequentially
-let SEQUENTIAL_TREE = (local_config == null) ? true:local_config.sequential;
-
 // UI Constants
 let K_SIDE_PANEL = "_21w25 _1E3L7";
 let K_GLOBAL_PRACTICE = "_6Hq2p _3FQrh _1uzK0 _3f25b _2arQ0 _3skMI _2ESN4";
 let K_DUOTREE = "mAsUf";
+let K_SKILL_ITEM = "_1b3q0";
 let K_CONFIG_BUTTON = "_3LN9C _3e75V _3f25b _3hso2 _3skMI oNqWF _3hso2 _3skMI";
 
 Array.prototype.randomElement = function () {
@@ -102,7 +76,43 @@ function readDuoState() {
 	course_keys = Object.keys(current_course.trackingProperties);
 }
 
+function readConfig() {
+	let local_config_name = 'duo.nextlesson.' + duoState.user.learningLanguage +
+	'.' + duoState.user.fromLanguage;
+	local_config = JSON.parse(localStorage.getItem(local_config_name));
+	console.debug(local_config)
+}
+
 function updateCrownLevel() {
+	//Split tree in STEP_DIVIDER sections (STEP_DIVIDER > 0)
+	let STEP_DIVIDER = local_config.hasOwnProperty('divider') ? local_config.divider:3;
+							// Bigger values => reach level 5 before new lessons
+							// Smaller values => get new lessons more often
+							// Values below 1 make no difference
+
+	// Minimum size of the section (STEP_MIN > 0)
+	let STEP_MIN = local_config.hasOwnProperty('min') ? local_config.min:1;
+							// Bigger values => get new lessons more often
+							// Smaller values => reach level 5 before new lessons
+							// Zero (0) is not a valid value!
+
+	// How many rows should cound as "just studied"
+	// Set it to -1 to study new lessons before old
+	// Set it to 0 or possitive number to study older lessons first
+	let STEP_INITIAL = local_config.hasOwnProperty('initial') ? local_config.initial:1;
+
+	// Set it to -1 to have more new lessons (Default)
+	// Set it to 0 to study evenly across the tree
+	// Set it to 1 to have more older lessons to study
+	let LINEAL = local_config.hasOwnProperty('lineal') ? local_config.lineal:-1;
+
+	//Complete skills in unlocked rows sequentially
+	let SEQUENTIAL_TREE = local_config.hasOwnProperty('sequential') ? local_config.sequential:true;
+
+	let WEIGHTED = local_config.hasOwnProperty('weighted') ? local_config.weighted:true;
+
+	let CHI_SQUARE = local_config.hasOwnProperty('chiq') ? local_config.chiq:false;
+
 	// Find the last completed row
 	var last_row = skills.reduce((acc, skill) => Math.max(acc, skill.row), 0);
 	let total_rows = course_skills.reduce((acc, skill) =>
@@ -122,7 +132,7 @@ function updateCrownLevel() {
 
 	// TODO: Bonus skills need to be processed a bit different since
 	// they use the same row number as other skills
-	
+
 	// Calculate the minimum targetCrownLevel
 	var last_skills = skills.filter(skill => skill.row == last_row);
 	var target_crown_level = last_skills.reduce(
@@ -133,9 +143,10 @@ function updateCrownLevel() {
 	var level_step = Math.max((last_row - FIRST_ROW) / divider, STEP_MIN);
 	var current_step = (LINEAL >=0) ? level_step :
 		STEP_DIVIDER * (last_row - FIRST_ROW) / divider + level_step;
-	
+
 	// Tweak initial condition for finished trees
 	if (finished_tree) {
+		// console.debug("Finished")
 		last_row += STEP_INITIAL;
 		target_crown_level--;
 	}
@@ -148,23 +159,31 @@ function updateCrownLevel() {
 		if (LINEAL != 0) current_step += LINEAL * level_step;
 		current_step = Math.max(current_step, STEP_MIN);
 	}
-	skills.map(skill => skill.crownWeight =
-		Math.max(skill.targetCrownLevel - skill.finishedLevels 
-				- skill.finishedLessons/skill.lessons, 0));
+	// Weight the different skills
+	if (WEIGHTED) {
+		// console.debug("Weighted")
+		skills.map(skill => skill.crownWeight =
+			Math.max(skill.targetCrownLevel - skill.finishedLevels
+					- skill.finishedLessons/skill.lessons, 0));
+	} else {
+		skills.map(skill => skill.crownWeight =
+			Math.max(skill.targetCrownLevel - skill.finishedLevels, 0));
+	}
 	if (SEQUENTIAL_TREE) {
+		// console.debug("Sequential")
 		for (var i = 1; i < unfinished_skills.length; i++) {
 			// Ignore other unfinished skills
 			unfinished_skills[i].crownWeight = 0;
 		}
 	}
-	var max_weight = skills.reduce( (acc,skill) => 
+	var max_weight = skills.reduce( (acc,skill) =>
 		acc = Math.max(acc, skill.crownWeight), 0);
 	next_skill = skills.filter(skill => skill.crownWeight == max_weight).randomElement();
 }
 
 // This dead code is here an not at the bottom of the file so I can easily
 // copy-paste the important parts of the script into firefox.
-// STEP_MIN = 1; STEP_DIVIDER = 4; STEP_INITIAL = 0; SEQUENTIAL_TREE = true; LINEAL = 0
+// var local_config = {divider: 1, min:1, initial: 0, lineal: -1, chiq: false, weighted: true, sequential: true};
 // readDuoState();
 // updateCrownLevel();
 // skills.map(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.finishedLevels})
@@ -173,8 +192,16 @@ function updateCrownLevel() {
 function createLessonButton(skill) {
 	var sidepanel = document.getElementsByClassName(K_SIDE_PANEL);
 	var duotree = document.getElementsByClassName(K_DUOTREE)[0];
-	
-	var button = document.createElement("button");
+
+	// Mark the first elemnt in the tree.
+	// It might be incompatible with other scripts using a similar trick
+	document.getElementsByClassName(K_SKILL_ITEM)[0].id="skill-tree-first-item"
+
+	var button = document.getElementById("next-lesson-button");
+	if (document.getElementById("next-lesson-button") == null) {
+		button = document.createElement("button");
+	}
+
 	button.id = "next-lesson-button";
 	button.type = "button";
 	button.textContent = "Start " + skill.name;
@@ -206,15 +233,17 @@ function skillURL(skill) {
 /* Add a "NEXT LESSON" button when necessary */
 function onChangeNextLesson(mutationsList) {
 	var duotree = document.getElementsByClassName(K_DUOTREE);
-	if (document.getElementById("next-lesson-button") == null
+	if (document.getElementById("skill-tree-first-item") == null
 			&& duotree.length != 0) {
-		console.debug("You need a new button");
+		// console.debug("You need a new button");
 		readDuoState();
+		readConfig();
 		updateCrownLevel();
 		createLessonButton(next_skill);
 	}
 }
 
+readDuoState();
 if (course_keys.includes("total_crowns")) {
 	new MutationObserver(onChangeNextLesson).observe(document.body, {
 	    childList : true,
