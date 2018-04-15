@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7.5
+// @version     0.7.6
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -80,6 +80,9 @@ function readConfig() {
 	let local_config_name = 'duo.nextlesson.' + duoState.user.learningLanguage +
 	'.' + duoState.user.fromLanguage;
 	local_config = JSON.parse(localStorage.getItem(local_config_name));
+	if (local_config == null) {
+		local_config = {};
+	}
 	console.debug(local_config)
 }
 
