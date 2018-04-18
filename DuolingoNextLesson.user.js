@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7.6
+// @version     0.7.7
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -66,7 +66,8 @@ function isCurrentCourse(x)
 function readDuoState() {
 	duoState = JSON.parse(localStorage['duo.state']);
 	course_skills = Object.values(duoState.skills).filter(isCurrentCourse);
-	skills = course_skills.filter(skill => skill.accessible == true);
+	skills = course_skills.filter(skill => skill.accessible == true &&
+			skill.hasOwnProperty('bonus') == false);
 	current_course = Object.values(duoState.courses).filter(isCurrentCourse)[0];
 	tree = current_course.skills.map(row => row.map (skill => {
 		duoState.skills[skill].targetCrownLevel = 1;
@@ -87,7 +88,7 @@ function readConfig() {
 }
 
 function updateCrownLevel() {
-	//Split tree in STEP_DIVIDER sections (STEP_DIVIDER > 0)
+	// Split tree in STEP_DIVIDER sections (STEP_DIVIDER > 0)
 	let STEP_DIVIDER = local_config.hasOwnProperty('divider') ? local_config.divider:3;
 							// Bigger values => reach level 5 before new lessons
 							// Smaller values => get new lessons more often
@@ -109,7 +110,7 @@ function updateCrownLevel() {
 	// Set it to 1 to have more older lessons to study
 	let LINEAL = local_config.hasOwnProperty('lineal') ? local_config.lineal:-1;
 
-	//Complete skills in unlocked rows sequentially
+	// Complete skills in unlocked rows sequentially
 	let SEQUENTIAL_TREE = local_config.hasOwnProperty('sequential') ? local_config.sequential:true;
 
 	let WEIGHTED = local_config.hasOwnProperty('weighted') ? local_config.weighted:true;
@@ -262,7 +263,6 @@ if (course_keys.includes("total_crowns")) {
 
 
 /* Unit testing
- *
  */
 
 function generateTestData() {
