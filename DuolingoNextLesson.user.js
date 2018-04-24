@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7.7
+// @version     0.7.8
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -50,7 +50,7 @@ var local_config = {divider: 3, min:1, initial: 0, lineal: -1,
 let K_SIDE_PANEL = "_21w25 _1E3L7";
 let K_GLOBAL_PRACTICE = "_6Hq2p _3FQrh _1uzK0 _3f25b _2arQ0 _3skMI _2ESN4";
 let K_DUOTREE = "mAsUf";
-let K_SKILL_ITEM = "_1b3q0";
+let K_SKILL_ITEM = "_2xGPj";
 let K_CONFIG_BUTTON = "_3LN9C _3e75V _3f25b _3hso2 _3skMI oNqWF _3hso2 _3skMI";
 
 Array.prototype.randomElement = function () {
@@ -199,7 +199,7 @@ function createLessonButton(skill) {
 
 	// Mark the first elemnt in the tree.
 	// It might be incompatible with other scripts using a similar trick
-	document.getElementsByClassName(K_SKILL_ITEM)[0].id="skill-tree-first-item"
+	document.getElementsByClassName(K_SKILL_ITEM)[0].id="skill-tree-first-item";
 
 	var button = document.getElementById("next-lesson-button");
 	if (document.getElementById("next-lesson-button") == null) {
@@ -212,6 +212,7 @@ function createLessonButton(skill) {
 	button.onclick = function () {
 		window.location.href= skillURL(skill);};
 	if (sidepanel.length > 0) {
+		// console.debug("Side panel");
 		button.className = K_GLOBAL_PRACTICE;
 	    button.style = "margin-top: 10px;"
 	    	+ "display: block;"
