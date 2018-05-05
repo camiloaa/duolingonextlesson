@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7.9
+// @version     0.7.10
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -206,7 +206,7 @@ function createLessonButton(skill) {
 
 	button.id = "next-lesson-button";
 	button.type = "button";
-	button.textContent = "Start " + skill.name;
+	button.textContent = "Start " + skill.shortName;
 	button.onclick = function () {
 		window.location.href= skillURL(skill);};
 	if (sidepanel.length > 0) {
