@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7.10
+// @version     0.7.11
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -169,7 +169,8 @@ function updateCrownLevel() {
 				- skill.finishedLessons/skill.lessons, 0));
 	if (WEIGHTED) {
 		// console.debug("Weighted")
-		skills.map(skill => skill.crownWeight += 2 * (1 - skill.strength));
+		skills.map(skill => { if (skill.finishedLevels > 0) 
+			skill.crownWeight += 2 * (1 - skill.strength); });
 	}
 	if (SEQUENTIAL_TREE) {
 		// console.debug("Sequential")
@@ -186,8 +187,8 @@ function updateCrownLevel() {
 // This dead code is here an not at the bottom of the file so I can easily
 // copy-paste the important parts of the script into firefox.
 // var local_config = {divider: 1, min:1, initial: 0, lineal: -1, chiq: false, weighted: true, sequential: true};
-// readDuoState();
-// updateCrownLevel();
+// readDuoState(); updateCrownLevel();
+// skills.map(x => res = {w: x.crownWeight, n: x.shortName})
 // skills.map(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.finishedLevels})
 // skills.filter( (skill, i, a) => i > 0 ? skill.row != a[i - 1].row : true ).map(skill => skill.targetCrownLevel)
 
