@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7.11
+// @version     0.7.12
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -88,6 +88,7 @@ function readConfig() {
 }
 
 function updateCrownLevel() {
+	let NON_LINEAL_SPLIT = [  [0], [0], [0, 1], [0, 3, 5], [0, 5, 8, 9], [0, 7, 10, 12, 14] ]
 	// Split tree in STEP_DIVIDER sections (STEP_DIVIDER > 0)
 	let STEP_DIVIDER = local_config.hasOwnProperty('divider') ? local_config.divider:3;
 							// Bigger values => reach level 5 before new lessons
@@ -144,24 +145,26 @@ function updateCrownLevel() {
 	course_skills.map(skill => skill.targetCrownLevel = target_crown_level)
 	// Split the rows. A lot of magic here
 	var divider = (LINEAL == 0) ? STEP_DIVIDER : (STEP_DIVIDER + 1) * STEP_DIVIDER / 2;
-	var level_step = Math.max((last_row - FIRST_ROW) / divider, STEP_MIN);
-	var current_step = (LINEAL >=0) ? level_step :
-		STEP_DIVIDER * (last_row - FIRST_ROW) / divider + level_step;
+	var level_step = (last_row - FIRST_ROW) / divider;
 
 	// Tweak initial condition for finished trees
 	if (finished_tree) {
 		// console.debug("Finished")
 		last_row += STEP_INITIAL;
-		target_crown_level--;
 	}
+
+	current_step = last_row;
+	/// console.debug("step:" + current_step + " " + target_crown_level);
 	// Increase targetCrownLevel for earlier skills
-	for (i = last_row - STEP_INITIAL;
-		(i > FIRST_ROW) && (++target_crown_level <= 5);
-		i -= current_step) {
-		skills.filter(skill => skill.row < Math.max(i, 0)).
-			map(skill => skill.targetCrownLevel = target_crown_level);
-		if (LINEAL != 0) current_step += LINEAL * level_step;
-		current_step = Math.max(current_step, STEP_MIN);
+	for (i = 0; (i < STEP_DIVIDER) && (++target_crown_level <= 5) && (current_step > 0); ++i) {
+		if (LINEAL != 0) {
+			current_step = last_row - STEP_INITIAL - NON_LINEAL_SPLIT[STEP_DIVIDER][i] * level_step;
+			// console.debug("step:" + current_step + " " + target_crown_level);
+		} else {
+			current_step = Math.trunc(last_row - STEP_INITIAL - i * level_step);
+		}
+		skills.filter(skill => skill.row <= Math.max(current_step, 0)).
+		map(skill => skill.targetCrownLevel = target_crown_level);
 	}
 	// Weight the different skills
 	skills.map(skill => skill.crownWeight =
