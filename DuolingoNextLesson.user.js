@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7.16
+// @version     0.7.17
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -36,6 +36,7 @@ var local_config = {divider: 3, min:1, initial: 0, lineal: -1,
 // and reload duolingo's webpage if you don't have access to the console.
 //		local_config = {divider: 1, min:1, initial: 0, lineal: -1, normal: true, sequential: true}
 //		localStorage.setItem('duo.nextlesson.es.en', JSON.stringify(local_config))
+//      localStorage.removeItem('duo.nextlesson.eo.es');
 //
 // In this example, duo.nextlesson.es.en means Spanish for English speakers.
 // Adjust the name for the course you want to configure.
@@ -84,7 +85,7 @@ function readConfig() {
 	if (local_config == null) {
 		local_config = {};
 	}
-	console.debug(local_config)
+	// console.debug(local_config)
 }
 
 function updateCrownLevel() {
@@ -145,11 +146,13 @@ function updateCrownLevel() {
 	course_skills.map(skill => skill.targetCrownLevel = target_crown_level)
 	// Split the rows. A lot of magic here
 	var divider = (LINEAL == 0) ? STEP_DIVIDER : (STEP_DIVIDER + 1) * STEP_DIVIDER / 2;
+	// console.debug("DIVIDER " + divider);
 	var level_step = (last_row - FIRST_ROW) / divider;
 
 	// Tweak initial condition for finished trees
 	if (finished_tree) {
 		// console.debug("Finished")
+		--target_crown_level;
 		last_row += STEP_INITIAL;
 	}
 
@@ -173,7 +176,7 @@ function updateCrownLevel() {
 	if (WEIGHTED) {
 		// console.debug("Weighted")
 		skills.map(skill => { if (skill.finishedLevels > 0 && skill.targetCrownLevel > skill.finishedLevels) 
-			skill.crownWeight += 2 * (1 - skill.strength); });
+			skill.crownWeight += (1 - skill.strength); });
 	}
 	if (SEQUENTIAL_TREE) {
 		// console.debug("Sequential")
@@ -184,7 +187,10 @@ function updateCrownLevel() {
 	}
 	var max_weight = skills.reduce( (acc,skill) =>
 		acc = Math.max(acc, skill.crownWeight), 0);
-	next_skill = skills.filter(skill => skill.crownWeight == max_weight).randomElement();
+	// console.debug("Max weight: " + max_weight);
+	next_skill = skills.filter(skill => skill.crownWeight >= max_weight - 0.1).randomElement();
+	// console.debug("Next skill: " + next_skill.shortName);
+	// console.debug(skills);
 }
 
 // This dead code is here an not at the bottom of the file so I can easily
