@@ -3,12 +3,19 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7.15
+// @version     0.7.16
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
 // @updateURL   https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
 // ==/UserScript==
+
+// UI Constants
+let K_SIDE_PANEL = "_21w25 _1E3L7";
+let K_GLOBAL_PRACTICE = "_6Hq2p _2ESN4 _2arQ0 _3skMI _1AM95";
+let K_DUOTREE = "i12-l";
+let K_SKILL_ITEM = "_2xGPj";
+let K_SMALL_SCREEN_BUTTON = "oNqWF _3hso2 _3skMI _1AM95";
 
 // Read configuration first
 // Kind of weird to read config before defining constants, but it was
@@ -45,13 +52,6 @@ var local_config = {divider: 3, min:1, initial: 0, lineal: -1,
 //	(4, 2, 0, 0)  : Same as (1, 4, 1) but keep it slow until the first shortcut.
 //	(4, 2, 0, 0)  : Same as (1, 4, 1) but keep it slow until the first shortcut.
 //	(1, 1, 0, 0)  : Even out a finished tree after crowns upgrade
-
-// UI Constants
-let K_SIDE_PANEL = "_21w25 _1E3L7";
-let K_GLOBAL_PRACTICE = "_6Hq2p _2ESN4 _2arQ0 _3skMI _1AM95";
-let K_DUOTREE = "i12-l";
-let K_SKILL_ITEM = "_2xGPj";
-let K_SMALL_SCREEN_BUTTON = "oNqWF _3hso2 _3skMI _1AM95";
 
 Array.prototype.randomElement = function () {
     return this[Math.floor(Math.random() * this.length)]
@@ -169,7 +169,7 @@ function updateCrownLevel() {
 	// Weight the different skills
 	skills.map(skill => skill.crownWeight =
 		Math.max(skill.targetCrownLevel - skill.finishedLevels
-				- skill.finishedLessons/skill.lessons, 0));
+				- (("progressRemaining" in skill) ? 1 - skill.progressRemaining[0] - skill.progressRemaining[1] : skill.finishedLessons/skill.lessons), 0));
 	if (WEIGHTED) {
 		// console.debug("Weighted")
 		skills.map(skill => { if (skill.finishedLevels > 0 && skill.targetCrownLevel > skill.finishedLevels) 
@@ -192,7 +192,7 @@ function updateCrownLevel() {
 // var local_config = {divider: 1, min:1, initial: 0, lineal: -1, chiq: false, weighted: true, sequential: true};
 // readDuoState(); updateCrownLevel();
 // skills.map(x => res = {w: x.crownWeight, n: x.shortName})
-// skills.map(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.finishedLevels})
+// skills.map(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.finishedLevels, n: x.shortName })
 // skills.filter( (skill, i, a) => i > 0 ? skill.row != a[i - 1].row : true ).map(skill => skill.targetCrownLevel)
 
 function createLessonButton(skill) {
