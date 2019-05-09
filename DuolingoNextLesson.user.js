@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7.14
+// @version     0.7.15
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -172,7 +172,7 @@ function updateCrownLevel() {
 				- skill.finishedLessons/skill.lessons, 0));
 	if (WEIGHTED) {
 		// console.debug("Weighted")
-		skills.map(skill => { if (skill.finishedLevels > 0) 
+		skills.map(skill => { if (skill.finishedLevels > 0 && skill.targetCrownLevel > skill.finishedLevels) 
 			skill.crownWeight += 2 * (1 - skill.strength); });
 	}
 	if (SEQUENTIAL_TREE) {
