@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7.17
+// @version     0.7.18
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -12,10 +12,10 @@
 
 // UI Constants
 let K_SIDE_PANEL = "_21w25 _1E3L7";
-let K_GLOBAL_PRACTICE = "_6Hq2p _2ESN4 _2arQ0 _3skMI _1AM95";
+let K_GLOBAL_PRACTICE = "_6Hq2p _2ESN4 _1X3l0 _1AM95 mucpb";
 let K_DUOTREE = "i12-l";
 let K_SKILL_ITEM = "_2xGPj";
-let K_SMALL_SCREEN_BUTTON = "oNqWF _3hso2 _3skMI _1AM95";
+let K_SMALL_SCREEN_BUTTON = "oNqWF _3hso2 _1X3l0 _1AM95  H7AnT";
 
 // Read configuration first
 // Kind of weird to read config before defining constants, but it was
