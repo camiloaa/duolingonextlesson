@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     0.7.18
+// @version     1.0.0
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -236,10 +236,15 @@ function createLessonButton(skill) {
 }
 
 function skillURL(skill) {
-	return "/skill/" +
+	var URL = "/skill/" +
 		skill.learningLanguage + "/" +
-		skill.urlName + "/" +
-		(1+skill.finishedLessons);
+		skill.urlName + "/"
+	if (skill.finishedLevels < 5) {
+		URL = URL +	(1+skill.finishedLessons);
+	} else {
+		URL = URL + "practice"
+	}
+	return URL;
 }
 
 /* Add a "NEXT LESSON" button when necessary */
