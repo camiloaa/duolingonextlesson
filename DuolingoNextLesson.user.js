@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     1.0.0
+// @version     1.0.1
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -27,8 +27,10 @@ var current_course = {};
 var tree = [];
 var course_keys = [];
 var next_skill = {};
-var local_config = {divider: 3, min:1, initial: 0, lineal: -1,
-		chiq: false, weighted: true, sequential: true};
+var local_config = {divider: 3, min:1, max:5, initial: 1, lineal: -1,
+		weighted: true, sequential: true};
+// localStorage.setItem('duo.nextlesson.es.en', JSON.stringify(local_config))
+// localStorage.removeItem('duo.nextlesson.eo.es');  // target.from
 
 // Configuration constants:
 // You can create your own per-course configuration using localStorage.
@@ -102,6 +104,10 @@ function updateCrownLevel() {
 							// Smaller values => reach level 5 before new lessons
 							// Zero (0) is not a valid value!
 
+	// Minimum size of the section (STEP_MIN > 0)
+	let MAX_LEVEL = local_config.hasOwnProperty('max') ? local_config.max:5;
+							// Maximum level to reach
+
 	// How many rows should cound as "just studied"
 	// Set it to -1 to study new lessons before old
 	// Set it to 0 or possitive number to study older lessons first
@@ -117,8 +123,6 @@ function updateCrownLevel() {
 
 	let WEIGHTED = local_config.hasOwnProperty('weighted') ? local_config.weighted:true;
 
-	let CHI_SQUARE = local_config.hasOwnProperty('chiq') ? local_config.chiq:false;
-
 	// Find the last completed row
 	var last_row = skills.reduce((acc, skill) => Math.max(acc, skill.row), 0);
 	let total_rows = course_skills.reduce((acc, skill) =>
@@ -130,10 +134,10 @@ function updateCrownLevel() {
 	if (unfinished_skills.length > 0) {
 		last_row = unfinished_skills[0].row;
 	}
-	let min_skill = skills.filter(skill => skill.finishedLevels < 5).
+	let min_skill = skills.filter(skill => skill.finishedLevels < MAX_LEVEL).
 		reduce((acc, skill) => Math.min(acc, skill.row), last_row)
 	let FIRST_ROW = (finished_tree) ?
-			skills.filter(skill => skill.finishedLevels < 5).
+			skills.filter(skill => skill.finishedLevels < MAX_LEVEL).
 				reduce((acc, skill) => Math.min(acc, skill.row), last_row) : 0;
 
 	// TODO: Bonus skills need to be processed a bit different since
@@ -142,7 +146,7 @@ function updateCrownLevel() {
 	// Calculate the minimum targetCrownLevel
 	var last_skills = skills.filter(skill => skill.row == last_row);
 	var target_crown_level = last_skills.reduce(
-			(acc, skill) => Math.min(acc, skill.finishedLevels + 1), 5);
+			(acc, skill) => Math.min(acc, skill.finishedLevels + 1), MAX_LEVEL);
 	course_skills.map(skill => skill.targetCrownLevel = target_crown_level)
 	// Split the rows. A lot of magic here
 	var divider = (LINEAL == 0) ? STEP_DIVIDER : (STEP_DIVIDER + 1) * STEP_DIVIDER / 2;
@@ -159,7 +163,7 @@ function updateCrownLevel() {
 	current_step = last_row;
 	/// console.debug("step:" + current_step + " " + target_crown_level);
 	// Increase targetCrownLevel for earlier skills
-	for (i = 0; (i < STEP_DIVIDER) && (++target_crown_level <= 5) && (current_step > 0); ++i) {
+	for (i = 0; (i < STEP_DIVIDER) && (++target_crown_level <= MAX_LEVEL) && (current_step > 0); ++i) {
 		if (LINEAL != 0) {
 			current_step = last_row - STEP_INITIAL - NON_LINEAL_SPLIT[STEP_DIVIDER][i] * level_step;
 			// console.debug("step:" + current_step + " " + target_crown_level);
@@ -195,7 +199,7 @@ function updateCrownLevel() {
 
 // This dead code is here an not at the bottom of the file so I can easily
 // copy-paste the important parts of the script into firefox.
-// var local_config = {divider: 1, min:1, initial: 0, lineal: -1, chiq: false, weighted: true, sequential: true};
+// var local_config = {divider: 1, min:1, initial: 0, lineal: -1, weighted: true, sequential: true};
 // readDuoState(); updateCrownLevel();
 // skills.map(x => res = {w: x.crownWeight, n: x.shortName})
 // skills.map(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.finishedLevels, n: x.shortName })
