@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     1.0.1
+// @version     1.0.2
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -78,6 +78,7 @@ function readDuoState() {
 	}))
 	totalLessons = course_skills.map(x => x.lessons).reduce((a, b) => a + b, 0);
 	course_keys = Object.keys(current_course.trackingProperties);
+	// console.debug("Read the configuration!");
 }
 
 function readConfig() {
@@ -161,7 +162,7 @@ function updateCrownLevel() {
 	}
 
 	current_step = last_row;
-	/// console.debug("step:" + current_step + " " + target_crown_level);
+	// console.debug("step:" + current_step + " " + target_crown_level);
 	// Increase targetCrownLevel for earlier skills
 	for (i = 0; (i < STEP_DIVIDER) && (++target_crown_level <= MAX_LEVEL) && (current_step > 0); ++i) {
 		if (LINEAL != 0) {
@@ -176,7 +177,9 @@ function updateCrownLevel() {
 	// Weight the different skills
 	skills.map(skill => skill.crownWeight =
 		Math.max(skill.targetCrownLevel - skill.finishedLevels
-				- (("progressRemaining" in skill) ? 1 - skill.progressRemaining[0] - skill.progressRemaining[1] : skill.finishedLessons/skill.lessons), 0));
+				- (("progressRemaining" in skill) ?
+				1 - (skill.progressRemaining.reduce( (acc,val) => acc = acc + val, 0 )) :
+				skill.finishedLessons/skill.lessons), 0));
 	if (WEIGHTED) {
 		// console.debug("Weighted")
 		skills.map(skill => { if (skill.finishedLevels > 0 && skill.targetCrownLevel > skill.finishedLevels) 
