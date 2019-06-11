@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     1.0.2
+// @version     1.1.0
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -27,34 +27,17 @@ var current_course = {};
 var tree = [];
 var course_keys = [];
 var next_skill = {};
-var local_config = {divider: 3, min:1, max:5, initial: 1, lineal: -1,
-		weighted: true, sequential: true};
+var local_config = {};
+
+// max_slope/min_slope: Maximum and minimum difference in crowns between
+//		the first active skill and the last skill in the course
+// max_level: level you want to reach in all skills
+// sequential: Complete the tree left to right
+//
+// var local_config = {min_slope: 2, max_slope: 4, max_level: 5, sequential: true};
 // localStorage.setItem('duo.nextlesson.es.en', JSON.stringify(local_config))
 // localStorage.removeItem('duo.nextlesson.eo.es');  // target.from
 
-// Configuration constants:
-// You can create your own per-course configuration using localStorage.
-// Copy the next two lines to the console, or uncomment them
-// and reload duolingo's webpage if you don't have access to the console.
-//		local_config = {divider: 1, min:1, initial: 0, lineal: -1, normal: true, sequential: true}
-//		localStorage.setItem('duo.nextlesson.es.en', JSON.stringify(local_config))
-//      localStorage.removeItem('duo.nextlesson.eo.es');
-//
-// In this example, duo.nextlesson.es.en means Spanish for English speakers.
-// Adjust the name for the course you want to configure.
-//
-// WARNING!!! If you edit the script, you'll have to upgrade it manually
-//
-// STEP = max(STEP_MIN, finishedRows/STEP_DIVIDER)
-// Example settings for (divider, min, initial, lineal):
-//	(4, 1, 0, -1) : 10% of rows at level 5, 20% @ 4, 30% @ 3, 40% @ 2. (DEFAULT)
-//	(4, 1, 0, 0)  : at least 25% of rows at level 5, at most 25% at level 4 and so on.
-//	(3, 1, -1, 0)  : Same as before, but more lessons from new skills
-//	(2, 1, 0, 0)  : 50% of finished rows at level 2, 50% at level 3.
-//	(1, 1, 0, 0)  : All rows pointing to level 2 until the end of the tree.
-//	(4, 2, 0, 0)  : Same as (1, 4, 1) but keep it slow until the first shortcut.
-//	(4, 2, 0, 0)  : Same as (1, 4, 1) but keep it slow until the first shortcut.
-//	(1, 1, 0, 0)  : Even out a finished tree after crowns upgrade
 
 Array.prototype.randomElement = function () {
     return this[Math.floor(Math.random() * this.length)]
@@ -91,121 +74,76 @@ function readConfig() {
 	// console.debug(local_config)
 }
 
+function applyStep(skill, index) {
+	// 1 ≤ currentProgress ≤ TargetCrownLevel ≤ max_level
+	skill.targetCrownLevel = Math.max(
+		Math.max(
+			Math.min(this.max_level - this.step * (index - this.offset),
+			this.max_level), 1), skill.currentProgress);
+
+	skill.crownWeight = skill.targetCrownLevel - skill.currentProgress;
+	return skill;
+}
+
 function updateCrownLevel() {
-	let NON_LINEAL_SPLIT = [  [0], [0], [0, 1], [0, 3, 5], [0, 5, 8, 9], [0, 7, 10, 12, 14] ]
-	// Split tree in STEP_DIVIDER sections (STEP_DIVIDER > 0)
-	let STEP_DIVIDER = local_config.hasOwnProperty('divider') ? local_config.divider:3;
-							// Bigger values => reach level 5 before new lessons
-							// Smaller values => get new lessons more often
-							// Values below 1 make no difference
+	// Read configuration
+	let max_slope = local_config.hasOwnProperty('max_slope') ? local_config.max_slope: 4;
+	let min_slope = local_config.hasOwnProperty('min_slope') ? local_config.min_slope: max_slope / 2;
+	let sequential_tree = local_config.hasOwnProperty('sequential') ? local_config.sequential:true;
+	var max_level = local_config.hasOwnProperty('max_level') ? local_config.max_level: 5;
 
-	// Minimum size of the section (STEP_MIN > 0)
-	let STEP_MIN = local_config.hasOwnProperty('min') ? local_config.min:1;
-							// Bigger values => get new lessons more often
-							// Smaller values => reach level 5 before new lessons
-							// Zero (0) is not a valid value!
+	// Give all skills an index.
+	// Makes it easy to find the array possition for any given skill
+	// Calculate progress for all skills
+	skills.map((skill, index) => { skill.index = index;
+		return skill.currentProgress = skill.finishedLevels +
+		1 - skill.progressRemaining.reduce( (acc,val) => acc = acc + val, 0 ) });
 
-	// Minimum size of the section (STEP_MIN > 0)
-	let MAX_LEVEL = local_config.hasOwnProperty('max') ? local_config.max:5;
-							// Maximum level to reach
+	let active_skills = skills.filter(skill => skill.finishedLevels < max_level);
+	let last_skill = skills[skills.length - 1];
+	let last_row = skills.filter(skill => skill.row == last_skill.row && skill.finishedLevels == 0);
+	let offset = active_skills.length > 0 ? active_skills[0].index: 0;
 
-	// How many rows should cound as "just studied"
-	// Set it to -1 to study new lessons before old
-	// Set it to 0 or possitive number to study older lessons first
-	let STEP_INITIAL = local_config.hasOwnProperty('initial') ? local_config.initial:1;
+	let slope = Math.max(
+		Math.min(course_skills.length / (skills.length - offset),
+		max_slope), min_slope);
 
-	// Set it to -1 to have more new lessons (Default)
-	// Set it to 0 to study evenly across the tree
-	// Set it to 1 to have more older lessons to study
-	let LINEAL = local_config.hasOwnProperty('lineal') ? local_config.lineal:-1;
+	let step = slope / course_skills.length;
+
+	var targetCrownLevel = skills.length * step + last_skill.currentProgress;
+	if (targetCrownLevel > max_level) {
+		targetCrownLevel = max_level;
+	}
+	if (active_skills.length > 0) {
+		if (targetCrownLevel <= active_skills[0].currentProgress) {
+			targetCrownLevel = active_skills[0].currentProgress + 0.1;
+		}
+	}
+
+	// console.debug("Offset: "+ offset+ "   Target: " + targetCrownLevel + "   Slope:" + slope);
+	skills.map(applyStep, {offset: offset, max_level: targetCrownLevel, step: step});
 
 	// Complete skills in unlocked rows sequentially
-	let SEQUENTIAL_TREE = local_config.hasOwnProperty('sequential') ? local_config.sequential:true;
-
-	let WEIGHTED = local_config.hasOwnProperty('weighted') ? local_config.weighted:true;
-
-	// Find the last completed row
-	var last_row = skills.reduce((acc, skill) => Math.max(acc, skill.row), 0);
-	let total_rows = course_skills.reduce((acc, skill) =>
-		Math.max(acc, skill.row), 0);
-	let unfinished_skills = skills.filter(skill =>
-		skill.finishedLevels == 0);
-	let finished_tree = (total_rows == last_row) &&
-		unfinished_skills.length == 0;
-	if (unfinished_skills.length > 0) {
-		last_row = unfinished_skills[0].row;
-	}
-	let min_skill = skills.filter(skill => skill.finishedLevels < MAX_LEVEL).
-		reduce((acc, skill) => Math.min(acc, skill.row), last_row)
-	let FIRST_ROW = (finished_tree) ?
-			skills.filter(skill => skill.finishedLevels < MAX_LEVEL).
-				reduce((acc, skill) => Math.min(acc, skill.row), last_row) : 0;
-
-	// TODO: Bonus skills need to be processed a bit different since
-	// they use the same row number as other skills
-
-	// Calculate the minimum targetCrownLevel
-	var last_skills = skills.filter(skill => skill.row == last_row);
-	var target_crown_level = last_skills.reduce(
-			(acc, skill) => Math.min(acc, skill.finishedLevels + 1), MAX_LEVEL);
-	course_skills.map(skill => skill.targetCrownLevel = target_crown_level)
-	// Split the rows. A lot of magic here
-	var divider = (LINEAL == 0) ? STEP_DIVIDER : (STEP_DIVIDER + 1) * STEP_DIVIDER / 2;
-	// console.debug("DIVIDER " + divider);
-	var level_step = (last_row - FIRST_ROW) / divider;
-
-	// Tweak initial condition for finished trees
-	if (finished_tree) {
-		// console.debug("Finished")
-		--target_crown_level;
-		last_row += STEP_INITIAL;
-	}
-
-	current_step = last_row;
-	// console.debug("step:" + current_step + " " + target_crown_level);
-	// Increase targetCrownLevel for earlier skills
-	for (i = 0; (i < STEP_DIVIDER) && (++target_crown_level <= MAX_LEVEL) && (current_step > 0); ++i) {
-		if (LINEAL != 0) {
-			current_step = last_row - STEP_INITIAL - NON_LINEAL_SPLIT[STEP_DIVIDER][i] * level_step;
-			// console.debug("step:" + current_step + " " + target_crown_level);
-		} else {
-			current_step = Math.trunc(last_row - STEP_INITIAL - i * level_step);
-		}
-		skills.filter(skill => skill.row <= Math.max(current_step, 0)).
-		map(skill => skill.targetCrownLevel = target_crown_level);
-	}
-	// Weight the different skills
-	skills.map(skill => skill.crownWeight =
-		Math.max(skill.targetCrownLevel - skill.finishedLevels
-				- (("progressRemaining" in skill) ?
-				1 - (skill.progressRemaining.reduce( (acc,val) => acc = acc + val, 0 )) :
-				skill.finishedLessons/skill.lessons), 0));
-	if (WEIGHTED) {
-		// console.debug("Weighted")
-		skills.map(skill => { if (skill.finishedLevels > 0 && skill.targetCrownLevel > skill.finishedLevels) 
-			skill.crownWeight += (1 - skill.strength); });
-	}
-	if (SEQUENTIAL_TREE) {
-		// console.debug("Sequential")
-		for (var i = 1; i < unfinished_skills.length; i++) {
-			// Ignore other unfinished skills
-			unfinished_skills[i].crownWeight = 0;
+	if ( sequential_tree && last_row.length > 1) {
+		for (let index = 1; index < last_row.length; index++) {
+			last_row[index].crownWeight = 0;
 		}
 	}
-	var max_weight = skills.reduce( (acc,skill) =>
-		acc = Math.max(acc, skill.crownWeight), 0);
+
+	var max_weight = skills.reduce( (acc,skill) => acc = Math.max(acc, skill.crownWeight), 0);
 	// console.debug("Max weight: " + max_weight);
-	next_skill = skills.filter(skill => skill.crownWeight >= max_weight - 0.1).randomElement();
+	// console.debug(skills.filter(skill => skill.crownWeight >= (max_weight - 0.1)));
+	next_skill = skills.filter(skill => skill.crownWeight >= (max_weight - 0.1)).randomElement();
 	// console.debug("Next skill: " + next_skill.shortName);
 	// console.debug(skills);
 }
 
 // This dead code is here an not at the bottom of the file so I can easily
 // copy-paste the important parts of the script into firefox.
-// var local_config = {divider: 1, min:1, initial: 0, lineal: -1, weighted: true, sequential: true};
+// var local_config = {min_slope: 2, max_slope: 4, max_level: 4, sequential: true};
 // readDuoState(); updateCrownLevel();
 // skills.map(x => res = {w: x.crownWeight, n: x.shortName})
-// skills.map(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.finishedLevels, n: x.shortName })
+// skills.map(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.currentProgress, n: x.shortName })
 // skills.filter( (skill, i, a) => i > 0 ? skill.row != a[i - 1].row : true ).map(skill => skill.targetCrownLevel)
 
 function createLessonButton(skill) {
