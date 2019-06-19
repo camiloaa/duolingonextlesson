@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     1.1.0
+// @version     1.1.1
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -31,10 +31,12 @@ var local_config = {};
 
 // max_slope/min_slope: Maximum and minimum difference in crowns between
 //		the first active skill and the last skill in the course
+//		Higher slope means you have to repeat earlier lessons first.
+//		Lower slope means you can advance the course faster.
 // max_level: level you want to reach in all skills
 // sequential: Complete the tree left to right
 //
-// var local_config = {min_slope: 2, max_slope: 4, max_level: 5, sequential: true};
+// var local_config = {min_slope: 2, max_slope: 8, max_level: 5, sequential: true};
 // localStorage.setItem('duo.nextlesson.es.en', JSON.stringify(local_config))
 // localStorage.removeItem('duo.nextlesson.eo.es');  // target.from
 
@@ -76,10 +78,11 @@ function readConfig() {
 
 function applyStep(skill, index) {
 	// 1 ≤ currentProgress ≤ TargetCrownLevel ≤ max_level
+	// console.debug("S:" + skill.shortName + " " + index)
 	skill.targetCrownLevel = Math.max(
 		Math.max(
 			Math.min(this.max_level - this.step * (index - this.offset),
-			this.max_level), 1), skill.currentProgress);
+			this.max_level), 0.5), skill.currentProgress);
 
 	skill.crownWeight = skill.targetCrownLevel - skill.currentProgress;
 	return skill;
@@ -102,23 +105,20 @@ function updateCrownLevel() {
 	let active_skills = skills.filter(skill => skill.finishedLevels < max_level);
 	let last_skill = skills[skills.length - 1];
 	let last_row = skills.filter(skill => skill.row == last_skill.row && skill.finishedLevels == 0);
-	let offset = active_skills.length > 0 ? active_skills[0].index: 0;
+	let first_skill = active_skills.length > 0 ? active_skills[0]: skills[0];
+	let offset = first_skill.index;
+
+	let max_diff = max_level - last_skill.currentProgress;
 
 	let slope = Math.max(
-		Math.min(course_skills.length / (skills.length - offset),
+		Math.min(max_diff * course_skills.length / (skills.length - offset),
 		max_slope), min_slope);
 
 	let step = slope / course_skills.length;
 
-	var targetCrownLevel = skills.length * step + last_skill.currentProgress;
-	if (targetCrownLevel > max_level) {
-		targetCrownLevel = max_level;
-	}
-	if (active_skills.length > 0) {
-		if (targetCrownLevel <= active_skills[0].currentProgress) {
-			targetCrownLevel = active_skills[0].currentProgress + 0.1;
-		}
-	}
+	let targetCrownLevel = Math.min(
+		max_level, Math.max(skills.length * step + last_skill.currentProgress + 0.1,
+			first_skill.currentProgress + 0.1));
 
 	// console.debug("Offset: "+ offset+ "   Target: " + targetCrownLevel + "   Slope:" + slope);
 	skills.map(applyStep, {offset: offset, max_level: targetCrownLevel, step: step});
@@ -218,37 +218,3 @@ if (course_keys.includes("total_crowns")) {
 } else {
 	console.debug("No crowns for you yet");
 }
-
-
-/* Unit testing
- */
-
-function generateTestData() {
-	let rows = [0, 0, 1, 1, 2, 3, 3, 4, 5, 5, 5, 6, 6, 6, 7, 7, 8, 8, 9, 9, 9,
-		10, 10, 11, 12, 13, 13, 13, 14, 14, 15, 16, 17, 17, 18, 18, 19, 19, 19,
-		20, 21, 21, 21, 21, 22, 23, 23, 24, 24, 25, 25, 26, 27, 27, 27, 28, 28,
-		29, 29, 30, 30, 30, 31, 31, 31, 32, 33, 34, 35, 35, 36, 36, 37, 37, 38,
-		38, 39, 39, 40, 40];
-	let finished_rows = [0, 1, 8, 10, 30, 40, 41];
-
-	return finished_rows.map(f => rows.map( r => {
-			var skill = {row: r, finishedLevels: 0, accessible: false,
-					finishedLessons: 0, lessons: 3};
-			if (r < f) {
-				skill.finishedLevels = 1;
-				skill.accessible = true;
-			} else if (r == f) {
-				skill.accessible = true;
-			}
-			return skill;
-		}
-	));
-}
-
-function setSkillLevel(level, row) {
-	skills.filter(skill => skill.row <= row).
-		map(skill => skill.finishedLevels = level)
-}
-
-// course_skills = generateTestData()[2]
-// skills = course_skills.filter(skill => skill.accessible == true)
