@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     1.1.1
+// @version     1.1.2
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
