@@ -14,7 +14,7 @@
 let K_SIDE_PANEL = "_21w25 _1E3L7";
 let K_GLOBAL_PRACTICE = "_6Hq2p _2ESN4 _1X3l0 _1AM95 mucpb";
 let K_DUOTREE = "i12-l";
-let K_SKILL_ITEM = "_2xGPj";
+let K_SKILL_ITEM = "w8Lxd";
 let K_SMALL_SCREEN_BUTTON = "oNqWF _3hso2 _1X3l0 _1AM95  H7AnT";
 
 // Read configuration first
