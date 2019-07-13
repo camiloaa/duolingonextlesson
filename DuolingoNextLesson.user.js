@@ -63,7 +63,7 @@ function readDuoState() {
 	}))
 	totalLessons = course_skills.map(x => x.lessons).reduce((a, b) => a + b, 0);
 	course_keys = Object.keys(current_course.trackingProperties);
-	// console.debug("Read the configuration!");
+	// console.debug("[DuolingoNextLesson] Read the configuration!");
 }
 
 function readConfig() {
@@ -78,7 +78,7 @@ function readConfig() {
 
 function applyStep(skill, index) {
 	// 1 ≤ currentProgress ≤ TargetCrownLevel ≤ max_level
-	// console.debug("S:" + skill.shortName + " " + index)
+	// console.debug("[DuolingoNextLesson] S:" + skill.shortName + " " + index)
 	skill.targetCrownLevel = Math.max(
 		Math.max(
 			Math.min(this.max_level - this.step * (index - this.offset),
@@ -120,7 +120,7 @@ function updateCrownLevel() {
 		max_level, Math.max(skills.length * step + last_skill.currentProgress + 0.1,
 			first_skill.currentProgress + 0.1));
 
-	// console.debug("Offset: "+ offset+ "   Target: " + targetCrownLevel + "   Slope:" + slope);
+	// console.debug("[DuolingoNextLesson] Offset: "+ offset+ "   Target: " + targetCrownLevel + "   Slope:" + slope + "  Step:" + step);
 	skills.map(applyStep, {offset: offset, max_level: targetCrownLevel, step: step});
 
 	// Complete skills in unlocked rows sequentially
@@ -131,10 +131,10 @@ function updateCrownLevel() {
 	}
 
 	var max_weight = skills.reduce( (acc,skill) => acc = Math.max(acc, skill.crownWeight), 0);
-	// console.debug("Max weight: " + max_weight);
+	// console.debug("[DuolingoNextLesson] Max weight: " + max_weight);
 	// console.debug(skills.filter(skill => skill.crownWeight >= (max_weight - 0.1)));
 	next_skill = skills.filter(skill => skill.crownWeight >= (max_weight - 0.1)).randomElement();
-	// console.debug("Next skill: " + next_skill.shortName);
+	// console.debug("[DuolingoNextLesson] Next skill: " + next_skill.shortName);
 	// console.debug(skills);
 }
 
@@ -165,14 +165,14 @@ function createLessonButton(skill) {
 	button.onclick = function () {
 		window.location.href= skillURL(skill);};
 	if (sidepanel.length > 0) {
-		// console.debug("Side panel");
+		// console.debug("[DuolingoNextLesson] Side panel");
 		button.className = K_GLOBAL_PRACTICE;
 	    button.style = "margin-top: 10px;"
 	    	+ "display: block;"
 	        + "visibility: visible;";
 		sidepanel[0].appendChild(button);
 	} else {
-		// console.debug("No side panel");
+		// console.debug("[DuolingoNextLesson] No side panel");
 		button.className = K_SMALL_SCREEN_BUTTON
 			+ " reverse-tree-enhancer-button";
 		button.style = "visibility: visible;";
@@ -197,7 +197,7 @@ function onChangeNextLesson(mutationsList) {
 	var duotree = document.getElementsByClassName(K_DUOTREE);
 	if (document.getElementById("skill-tree-first-item") == null
 			&& duotree.length != 0) {
-		// console.debug("You need a new button");
+		// console.debug("[DuolingoNextLesson] You need a new button");
 		readDuoState();
 		readConfig();
 		updateCrownLevel();
@@ -216,5 +216,5 @@ if (course_keys.includes("total_crowns")) {
             + " ready");
 	onChangeNextLesson();
 } else {
-	console.debug("No crowns for you yet");
+	console.debug("[DuolingoNextLesson] No crowns for you yet");
 }
