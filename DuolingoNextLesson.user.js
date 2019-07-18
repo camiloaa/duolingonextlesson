@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     1.1.2
+// @version     1.1.3
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -78,13 +78,12 @@ function readConfig() {
 
 function applyStep(skill, index) {
 	// 1 ≤ currentProgress ≤ TargetCrownLevel ≤ max_level
-	// console.debug("[DuolingoNextLesson] S:" + skill.shortName + " " + index)
 	skill.targetCrownLevel = Math.max(
-		Math.max(
 			Math.min(this.max_level - this.step * (index - this.offset),
-			this.max_level), 0.5), skill.currentProgress);
+			this.max_level), skill.currentProgress);
 
 	skill.crownWeight = skill.targetCrownLevel - skill.currentProgress;
+	// console.debug("[DuolingoNextLesson] S:" + skill.shortName + " " + index + " T:" + skill.targetCrownLevel + " W:" + skill.crownWeight);
 	return skill;
 }
 
