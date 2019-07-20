@@ -68,11 +68,15 @@ function readDuoState() {
 function readConfig() {
 	let local_config_name = 'duo.nextlesson.' + duoState.user.learningLanguage +
 	'.' + duoState.user.fromLanguage;
+	default_config = JSON.parse(localStorage.getItem("duo.nextlesson"));
+	if (default_config == null) {
+		default_config = {};
+	}
 	local_config = JSON.parse(localStorage.getItem(local_config_name));
 	if (local_config == null) {
-		local_config = {};
+		local_config = default_config;
 	}
-	// console.debug(local_config)
+	console.debug(local_config)
 }
 
 function applyStep(skill, index) {
