@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     1.1.3
+// @version     1.1.4
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -12,10 +12,9 @@
 
 // UI Constants
 let K_SIDE_PANEL = "_21w25 _1E3L7";
-let K_GLOBAL_PRACTICE = "_6Hq2p _2ESN4 _1X3l0 _1AM95 mucpb";
-let K_DUOTREE = "i12-l";
+let K_DUOTREE = "w8Lxd";
 let K_SKILL_ITEM = "w8Lxd";
-let K_SMALL_SCREEN_BUTTON = "oNqWF _3hso2 _1X3l0 _1AM95  H7AnT";
+let K_SMALL_SCREEN_BUTTON = "oNqWF _3hso2 _2Zh2S _1X3l0 _1AM95 H7AnT";
 
 // Read configuration first
 // Kind of weird to read config before defining constants, but it was
@@ -162,21 +161,13 @@ function createLessonButton(skill) {
 	button.type = "button";
 	button.textContent = "Start " + skill.shortName;
 	button.onclick = function () {
-		window.location.href= skillURL(skill);};
-	if (sidepanel.length > 0) {
-		// console.debug("[DuolingoNextLesson] Side panel");
-		button.className = K_GLOBAL_PRACTICE;
-	    button.style = "margin-top: 10px;"
-	    	+ "display: block;"
-	        + "visibility: visible;";
-		sidepanel[0].appendChild(button);
-	} else {
-		// console.debug("[DuolingoNextLesson] No side panel");
-		button.className = K_SMALL_SCREEN_BUTTON
-			+ " reverse-tree-enhancer-button";
-		button.style = "visibility: visible;";
-		duotree.insertBefore(button, duotree.firstChild);
-	}
+		window.location.href = skillURL(skill);
+	};
+	// console.debug("[DuolingoNextLesson] No side panel");
+	button.className = K_SMALL_SCREEN_BUTTON
+		+ " reverse-tree-enhancer-button";
+	button.style = "visibility: visible;";
+	duotree.insertBefore(button, duotree.firstChild);
 }
 
 function skillURL(skill) {
