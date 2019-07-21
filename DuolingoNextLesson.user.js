@@ -76,7 +76,7 @@ function readConfig() {
 	if (local_config == null) {
 		local_config = default_config;
 	}
-	console.debug(local_config)
+	// console.debug(local_config)
 }
 
 function applyStep(skill, index) {
