@@ -3,8 +3,8 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     1.1.6
-// @description Add a "START LESSON" button in Duolingo.
+// @version     1.2.0
+// @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -22,6 +22,9 @@ let K_ROW = "_2GJb6";
 let K_CRACKED = "_22Nf9";
 let K_SHORT_NAME = "_21B3_";
 let K_EXERCISE_BUTTON = "_3bahF _3J-7b";
+let K_SKILL_POPUP = "Af4up";
+let K_LEVEL_DIV = "I1Bp8";
+let K_LESSONS_DIV = "_1eGmL";
 
 // Read configuration first
 // Kind of weird to read config before defining constants, but it was
@@ -51,6 +54,13 @@ Array.prototype.randomElement = function () {
     return this[Math.floor(Math.random() * this.length)]
 }
 
+Element.prototype.parentN = function(n) {
+	if (parseInt(n) <= 0) {
+		return this;
+	}
+	return this.parentElement.parentN(n - 1);
+}
+
 function isCurrentCourse(x)
 {
 	return x.learningLanguage === duoState.user.learningLanguage &&
@@ -70,8 +80,6 @@ function readDuoState() {
 	totalLessons = course_skills.map(x => x.lessons).reduce((a, b) => a + b, 0);
 	course_keys = Object.keys(current_course.trackingProperties);
 	// console.debug("[DuolingoNextLesson] Read the configuration!");
-	console.debug("DuolingoNextLesson version " + GM_info.script.version
-		+ " ready");
 }
 
 // TODO: Remove if release > 1.1.8
@@ -123,7 +131,7 @@ function readConfig() {
 	moveLocalStorageToGM(); // TODO: remove if release > 1.1.8
 	let local_config_name = 'duo.nextlesson.' + duoState.user.learningLanguage +
 	'.' + duoState.user.fromLanguage;
-	let default_values = { min_slope: 2, max_slope: 8, max_level: 5, sequential: true };
+	let default_values = { min_slope: 4, max_slope: 8, max_level: 5, sequential: true };
 	default_config = JSON.parse(GM_getValue("duo.nextlesson", JSON.stringify(default_values)));
 	local_config = JSON.parse(GM_getValue(local_config_name,JSON.stringify(default_config)));
 	// console.debug(local_config)
@@ -142,10 +150,10 @@ function applyStep(skill, index) {
 
 function updateCrownLevel() {
 	// Read configuration
-	let max_slope = local_config.max_slope;
-	let min_slope = local_config.min_slope;
+	let max_slope = parseFloat(local_config.max_slope);
+	let min_slope = parseFloat(local_config.min_slope);
 	let sequential_tree = local_config.sequential;
-	var max_level = local_config.max_level;
+	let max_level = parseFloat(local_config.max_level);
 
 	// Give all skills an index.
 	// Makes it easy to find the array possition for any given skill
@@ -154,7 +162,7 @@ function updateCrownLevel() {
 		return skill.currentProgress = skill.finishedLevels +
 		1 - skill.progressRemaining.reduce( (acc,val) => acc = acc + val, 0 ) });
 
-	let active_skills = skills.filter(skill => skill.finishedLevels < max_level);
+	let active_skills = skills.filter(skill => skill.currentProgress < max_level);
 	let last_skill = skills[skills.length - 1];
 	let last_row = skills.filter(skill => skill.row == last_skill.row && skill.finishedLevels == 0);
 	let first_skill = active_skills.length > 0 ? active_skills[0]: skills[0];
@@ -185,14 +193,14 @@ function updateCrownLevel() {
 	var max_weight = skills.reduce( (acc,skill) => acc = Math.max(acc, skill.crownWeight), 0);
 	// console.debug("[DuolingoNextLesson] Max weight: " + max_weight);
 	// console.debug(skills.filter(skill => skill.crownWeight >= (max_weight - 0.1)));
-	next_skill = skills.filter(skill => skill.crownWeight >= (max_weight - 0.1)).randomElement();
+	next_skill = skills.filter(skill => skill.crownWeight > 0 && skill.crownWeight >= (max_weight - 0.1)).randomElement();
 	// console.debug("[DuolingoNextLesson] Next skill: " + next_skill.shortName);
 	// console.debug(skills);
 }
 
 // This dead code is here an not at the bottom of the file so I can easily
 // copy-paste the important parts of the script into firefox.
-// var local_config = {min_slope: 2, max_slope: 4, max_level: 4, sequential: true};
+// var local_config = {min_slope: 2, max_slope: 6, max_level: 4.8, sequential: true};
 // readDuoState(); updateCrownLevel();
 // skills.map(x => res = {w: x.crownWeight, n: x.shortName})
 // skills.map(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.currentProgress, n: x.shortName })
@@ -229,8 +237,8 @@ function createLessonButton(skill) {
 
 function selectNextLesson(skill) {
 	var skill_names = Array.prototype.slice.call(document.getElementsByClassName(K_SHORT_NAME));
-	var next_skill = skill_names.filter(name => name.innerText == skill.shortName)[0].parentElement.parentElement;
-	next_skill.parentElement.parentElement.scrollIntoView(false);
+	var next_skill = skill_names.filter(name => name.innerText == skill.shortName)[0].parentN(2);
+	next_skill.parentN(2).scrollIntoView(false);
 	next_skill.click();
 }
 
@@ -249,7 +257,7 @@ function skillURL(skill) {
 /* Move all craked skills to a new section at the begining of the tree */
 function moveCrackedSkills() {
 	var cracked = Array.prototype.slice.call(document.getElementsByClassName(K_CRACKED))
-	var cracked_skills = cracked.map(item => item.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement);
+	var cracked_skills = cracked.map(item => item.parentN(7));
 	var c_size = 4;
 	var cracked_chunks = Array(Math.ceil(cracked_skills.length / c_size)).fill().map((_, i) => cracked_skills.slice(i * c_size, i * c_size + c_size));
 	var section = document.createElement("div")
@@ -268,9 +276,10 @@ function moveCrackedSkills() {
 	rows.map(row => subsection.appendChild(row));
 }
 
-/* Add a "NEXT LESSON" button when necessary */
 function onChangeNextLesson(mutationsList) {
 	var duotree = document.getElementsByClassName(K_DUOTREE);
+
+	/* Add a "NEXT LESSON" button when necessary */
 	if (duotree.length != 0) {
 		if (document.getElementById("skill-tree-first-item") == null) {
 			// console.debug("[DuolingoNextLesson] You need a new button");
@@ -284,9 +293,35 @@ function onChangeNextLesson(mutationsList) {
 			}
 		}
 	}
+
+	/* List the number of lessons missing in the current level */
+	for (var i = 0; i < mutationsList.length; ++i) {
+		mutation = mutationsList[i];
+		if (mutation.type === 'childList') {
+			var target = mutation.target;
+			if (target.className == K_SKILL_POPUP) {
+				var level = target.getElementsByClassName(K_LEVEL_DIV)[0];
+				if (level != null) {
+					var skill_node = level.parentN(4);
+					// console.debug(skill_node);
+					var skill_shortName = skill_node.getElementsByClassName(K_SHORT_NAME)[0].innerText;
+					// console.debug("Node " + skill_shortName);
+					var selected_skill = skills.filter(skill => skill.shortName == skill_shortName)[0];
+					var div = document.createElement('div');
+					div.className = K_LESSONS_DIV;
+					div.innerHTML = "Lessons " + selected_skill.finishedLessons + '/' + selected_skill.lessons;
+					level.insertBefore(div, level.firstChild.nextSibling);
+				}
+			}
+		}
+	}
+
 }
 
 new MutationObserver(onChangeNextLesson).observe(document.body, {
 	childList: true,
 	subtree: true
 });
+
+console.debug("DuolingoNextLesson version " + GM_info.script.version
+	+ " ready");
