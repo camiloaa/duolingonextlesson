@@ -5,13 +5,12 @@
 // @author      Camilo
 // @version     1.1.6
 // @description Add a "START LESSON" button in Duolingo.
-// @grant	none
+// @grant       GM_getValue
+// @grant       GM_setValue
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
 // @updateURL   https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
 // ==/UserScript==
 
-// Config constants
-let K_MOVE_CRACKED_SKILLS = false; // Change to true if you want cracked skills at the beginning of the tree
 // UI Constants
 let K_SIDE_PANEL = "_21w25 _1E3L7";
 let K_DUOTREE = "i12-l";
@@ -75,17 +74,58 @@ function readDuoState() {
 		+ " ready");
 }
 
+// TODO: Remove if release > 1.1.8
+function moveLocalStorageToGM()
+{
+	let local_config_name = 'duo.nextlesson.' + duoState.user.learningLanguage +
+		'.' + duoState.user.fromLanguage;
+	var d_config = JSON.parse(localStorage.getItem("duo.nextlesson"));
+	if (d_config != null) {
+		console.debug("Moving default config " + d_config);
+		if (!d_config.hasOwnProperty('max_slope')) {
+			d_config.max_slope = 4;
+		}
+		if (!d_config.hasOwnProperty('min_slope')) {
+			d_config.min_slope = 2;
+		}
+		if (!d_config.hasOwnProperty('sequential')) {
+			d_config.sequential = true;
+		}
+		if (!d_config.hasOwnProperty('max_level')) {
+			d_config.max_level = 5;
+		}
+		GM_setValue('duo.nextlesson', JSON.stringify(d_config));
+		console.debug("Deleting default config");
+		localStorage.removeItem('duo.nextlesson');
+	}
+	l_config = JSON.parse(localStorage.getItem(local_config_name));
+	if (l_config != null) {
+		console.debug("Moving local config " + l_config);
+		if (!l_config.hasOwnProperty('max_slope')) {
+			l_config.max_slope = 4;
+		}
+		if (!l_config.hasOwnProperty('min_slope')) {
+			l_config.min_slope = 2;
+		}
+		if (!l_config.hasOwnProperty('sequential')) {
+			l_config.sequential = true;
+		}
+		if (!l_config.hasOwnProperty('max_level')) {
+			l_config.max_level = 5;
+		}
+		GM_setValue(local_config_name, JSON.stringify(l_config));
+		console.debug("Deleting local config " + local_config_name);
+		localStorage.removeItem(local_config_name);
+	}
+}
+
 function readConfig() {
+	moveLocalStorageToGM(); // TODO: remove if release > 1.1.8
 	let local_config_name = 'duo.nextlesson.' + duoState.user.learningLanguage +
 	'.' + duoState.user.fromLanguage;
-	default_config = JSON.parse(localStorage.getItem("duo.nextlesson"));
-	if (default_config == null) {
-		default_config = {};
-	}
-	local_config = JSON.parse(localStorage.getItem(local_config_name));
-	if (local_config == null) {
-		local_config = default_config;
-	}
+	let default_values = { min_slope: 2, max_slope: 8, max_level: 5, sequential: true };
+	default_config = JSON.parse(GM_getValue("duo.nextlesson", JSON.stringify(default_values)));
+	local_config = JSON.parse(GM_getValue(local_config_name,JSON.stringify(default_config)));
 	// console.debug(local_config)
 }
 
@@ -102,10 +142,10 @@ function applyStep(skill, index) {
 
 function updateCrownLevel() {
 	// Read configuration
-	let max_slope = local_config.hasOwnProperty('max_slope') ? local_config.max_slope: 4;
-	let min_slope = local_config.hasOwnProperty('min_slope') ? local_config.min_slope: max_slope / 2;
-	let sequential_tree = local_config.hasOwnProperty('sequential') ? local_config.sequential:true;
-	var max_level = local_config.hasOwnProperty('max_level') ? local_config.max_level: 5;
+	let max_slope = local_config.max_slope;
+	let min_slope = local_config.min_slope;
+	let sequential_tree = local_config.sequential;
+	var max_level = local_config.max_level;
 
 	// Give all skills an index.
 	// Makes it easy to find the array possition for any given skill
@@ -239,7 +279,7 @@ function onChangeNextLesson(mutationsList) {
 			updateCrownLevel();
 			createLessonButton(next_skill);
 			selectNextLesson(next_skill);
-			if (K_MOVE_CRACKED_SKILLS) {
+			if (GM_getValue('move_cracked_skills', false)) {
 				moveCrackedSkills();
 			}
 		}
