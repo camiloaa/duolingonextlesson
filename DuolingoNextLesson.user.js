@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     1.1.5
+// @version     1.1.5k
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
@@ -13,8 +13,14 @@
 // UI Constants
 let K_SIDE_PANEL = "_21w25 _1E3L7";
 let K_DUOTREE = "i12-l";
-let K_SKILL_ITEM = "i12-l";
+let K_SKILL_ITEM = "QmbDT";
 let K_SMALL_SCREEN_BUTTON = "oNqWF _3hso2 _2Zh2S _1X3l0 _1AM95 H7AnT";
+let K_SECTION = "Xpzj7 _3HLko";
+let K_SUBSECTION = "CDRFO";
+let K_ROW = "_2GJb6";
+let K_CRACKED = "_22Nf9";
+let K_SHORT_NAME = "_21B3_";
+let K_EXERCISE_BUTTON = "_3bahF _3J-7b";
 
 // Read configuration first
 // Kind of weird to read config before defining constants, but it was
@@ -149,7 +155,6 @@ function updateCrownLevel() {
 // skills.filter( (skill, i, a) => i > 0 ? skill.row != a[i - 1].row : true ).map(skill => skill.targetCrownLevel)
 
 function createLessonButton(skill) {
-	var sidepanel = document.getElementsByClassName(K_SIDE_PANEL);
 	var duotree = document.getElementsByClassName(K_DUOTREE)[0];
 
 	// Mark the first elemnt in the tree.
@@ -175,6 +180,13 @@ function createLessonButton(skill) {
 	duotree.insertBefore(button, duotree.firstChild);
 }
 
+function selectNextLesson(skill) {
+	var skill_names = Array.prototype.slice.call(document.getElementsByClassName(K_SHORT_NAME));
+	var next_skill = skill_names.filter(name => name.innerText == skill.shortName)[0].parentElement.parentElement;
+	next_skill.parentElement.parentElement.scrollIntoView(false);
+	next_skill.click();
+}
+
 function skillURL(skill) {
 	var URL = "/skill/" +
 		skill.learningLanguage + "/" +
@@ -187,16 +199,41 @@ function skillURL(skill) {
 	return URL;
 }
 
+/* Move all craked skills to a new section at the begining of the tree */
+function moveCrackedSkills() {
+	var cracked = Array.prototype.slice.call(document.getElementsByClassName(K_CRACKED))
+	var cracked_skills = cracked.map(item => item.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement);
+	var c_size = 4;
+	var cracked_chunks = Array(Math.ceil(cracked_skills.length / c_size)).fill().map((_, i) => cracked_skills.slice(i * c_size, i * c_size + c_size));
+	var section = document.createElement("div")
+	var subsection = document.createElement("div")
+	var firstsect = document.getElementsByClassName(K_SECTION)[0];
+	section.className = K_SECTION;
+	subsection.className = K_SUBSECTION;
+	firstsect.parentElement.insertBefore(section, firstsect);
+	var rows = cracked_chunks.map(chunk => {
+		var row = document.createElement("div");
+		row.className = K_ROW;
+		chunk.map(item => row.appendChild(item));
+		return row;
+	})
+	section.appendChild(subsection)
+	rows.map(row => subsection.appendChild(row));
+}
+
 /* Add a "NEXT LESSON" button when necessary */
 function onChangeNextLesson(mutationsList) {
 	var duotree = document.getElementsByClassName(K_DUOTREE);
-	if (document.getElementById("skill-tree-first-item") == null
-			&& duotree.length != 0) {
-		// console.debug("[DuolingoNextLesson] You need a new button");
-		readDuoState();
-		readConfig();
-		updateCrownLevel();
-		createLessonButton(next_skill);
+	if (duotree.length != 0) {
+		if (document.getElementById("skill-tree-first-item") == null) {
+			// console.debug("[DuolingoNextLesson] You need a new button");
+			readDuoState();
+			readConfig();
+			updateCrownLevel();
+			createLessonButton(next_skill);
+			selectNextLesson(next_skill);
+			// moveCrackedSkills();
+		}
 	}
 }
 
