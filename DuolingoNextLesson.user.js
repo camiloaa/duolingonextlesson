@@ -3,13 +3,15 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo
-// @version     1.1.5k
+// @version     1.1.6
 // @description Add a "START LESSON" button in Duolingo.
 // @grant	none
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
 // @updateURL   https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
 // ==/UserScript==
 
+// Config constants
+let K_MOVE_CRACKED_SKILLS = false; // Change to true if you want cracked skills at the beginning of the tree
 // UI Constants
 let K_SIDE_PANEL = "_21w25 _1E3L7";
 let K_DUOTREE = "i12-l";
@@ -69,6 +71,8 @@ function readDuoState() {
 	totalLessons = course_skills.map(x => x.lessons).reduce((a, b) => a + b, 0);
 	course_keys = Object.keys(current_course.trackingProperties);
 	// console.debug("[DuolingoNextLesson] Read the configuration!");
+	console.debug("DuolingoNextLesson version " + GM_info.script.version
+		+ " ready");
 }
 
 function readConfig() {
@@ -155,17 +159,20 @@ function updateCrownLevel() {
 // skills.filter( (skill, i, a) => i > 0 ? skill.row != a[i - 1].row : true ).map(skill => skill.targetCrownLevel)
 
 function createLessonButton(skill) {
-	var duotree = document.getElementsByClassName(K_DUOTREE)[0];
+	var exercise_button = document.getElementsByClassName(K_EXERCISE_BUTTON)[0];
 
 	// Mark the first elemnt in the tree.
 	// It might be incompatible with other scripts using a similar trick
 	document.getElementsByClassName(K_SKILL_ITEM)[0].id="skill-tree-first-item";
 
 	var button = document.getElementById("next-lesson-button");
-	if (document.getElementById("next-lesson-button") == null) {
+	if (button == null) {
+		button = document.createElement("button");
+	} else {
+		exercise_button.removeChild(button);
 		button = document.createElement("button");
 	}
-
+	// Configure the next lesson button
 	button.id = "next-lesson-button";
 	button.type = "button";
 	button.textContent = "Start " + skill.shortName;
@@ -177,7 +184,7 @@ function createLessonButton(skill) {
 		+ " reverse-tree-enhancer-button";
 	button.style = "visibility: visible;" +
 		"border-left-width: 1px; ";
-	duotree.insertBefore(button, duotree.firstChild);
+	exercise_button.appendChild(button);
 }
 
 function selectNextLesson(skill) {
@@ -232,21 +239,14 @@ function onChangeNextLesson(mutationsList) {
 			updateCrownLevel();
 			createLessonButton(next_skill);
 			selectNextLesson(next_skill);
-			// moveCrackedSkills();
+			if (K_MOVE_CRACKED_SKILLS) {
+				moveCrackedSkills();
+			}
 		}
 	}
 }
 
-readDuoState();
-if (course_keys.includes("total_crowns")) {
-	new MutationObserver(onChangeNextLesson).observe(document.body, {
-	    childList : true,
-	    subtree : true
-	});
-
-    console.debug("DuolingoNextLesson version " + GM_info.script.version
-            + " ready");
-	onChangeNextLesson();
-} else {
-	console.debug("[DuolingoNextLesson] No crowns for you yet");
-}
+new MutationObserver(onChangeNextLesson).observe(document.body, {
+	childList: true,
+	subtree: true
+});
