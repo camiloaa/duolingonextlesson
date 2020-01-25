@@ -3,25 +3,81 @@ DuolingoNextLesson
 
 If you have Tampermonkey/Greasemonkey/Violentmonkey installed you can [install the script by clicking on this link](https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js)
 
+## Features
+
+- Recommend next lesson to study following a staircase order. Earlier lessons will reach level 5 before later lessons.
+- Add a floating button with the recommended skill.
+- Create a new section on top of the tree with all the cracked skills.
+- Show number of lessons in each skill in addition to percentages.
+- Per-course configuration. Not user friendly!
+
+## Screenshots
+
+Recommended lesson showing number of lessons and floating button    
+![Recommended lesson](screenshots/SelectedItem.png)
+
+Top of the tree    
+![Top of the tree](screenshots/TopTree.png)
+
 ## Configure
 
-You can create your own per-course configuration using localStorage.
-In this example, duo.nextlesson.es.en means Spanish for English speakers.
-Adjust the name for the course you want to configure.
+You can adjust the script behavior in different ways.
+There is no GUI for changing the script behavior, but it is not rocket science either.
+Instructions are for ViolentMonkey, but other script managers have similar functionality.
+
+1. Open the script manager and select the "edit script icon"    
+![Script manager](screenshots/InstalledScripts.png)
+
+2. Select the "values" tab    
+![Values tab in script editor](screenshots/Editor.png)
+
+3. Select the + icon to add new configuration options    
+![Values](screenshots/Values.png)
+
+### Do not auto-scroll to the recommended lesson
+
+If you don't like your duolingo tree auto-scrolling to the recommended lesson, you can
+disable the feature adding new key 'auto_scroll_to_next' with value 'false'.
+
+### Move recommended skills to the top
+
+By default, the skills on the top of the tree are just pointers to the "actual" skills.
+When you click them, you just jump to the place on the tree where the skill is usually located.
+
+You can change that behavior by "moving" them to the top, meaning that the original skills won't show
+in their original position anymore, but only in the new section at the top.
+
+To achieve it, add a new key 'move_cracked_skills' with value 'true'.
+
+### Different defaults
+
+The algorithm for recommending a lesson is weighted by default in a way that the first skill of the
+tree will reach level 5 more or less when you are 1/3 into the tree.
+
+That's it, if you add the next key/value pair, nothing will change.
+
+
 ```
-		mycfg = {divider: 4, min:1, initial: 0, lineal: -1, sequential: true}
-		localStorage.setItem('duo.nextlesson.es.en', JSON.stringify(mycfg))
+key: duo.nextlesson
+value:  "{\"min_slope\":4,\"max_slope\":8,\"max_level\":5,\"sequential\":true}"
 ```
-You can also change the global settings by modifying the code directly
 
-**WARNING!!!** If you edit the script, you'll have to upgrade it manually
+By changing the min_slope and max_slope values, you can decide how much emphasis you want to put
+on repetition vs new lessons.
 
-Example settings for (divider, min, initial, lineal):
--	(4, 1, 0, -1) : 10% of rows at level 5, 20% @ 4, 30% @ 3, 40% @ 2. (DEFAULT)
--	(4, 1, 0, 0)  : at least 25% of rows at level 5, at most 25% at level 4 and so on.
--	(3, 1, -1, 0)  : Same as before, but more lessons from new skills
--	(2, 1, 0, 0)  : 50% of finished rows at level 2, 50% at level 3.
--	(1, 1, 0, 0)  : All rows pointing to level 2 until the end of the tree.
--	(4, 2, 0, 0)  : Same as (1, 4, 0) but keep it slow until the first shortcut.
--	(4, 2, 0, 0)  : Same as (1, 4, 0) but keep it slow until the first shortcut.
+A low value will mean you get more new lessons, and probably a mostly blue tree at the end.
 
+A high value will mean you reach level 5 faster, at the expense of new lessons.
+
+The difference between min_slope and max_slope will dictate the degree of flexibility for the policy.
+If you decide to ignore the recommendations, and study new lessons instead, a lower value in min_slope
+will allow the script to adapt to your actual pace of study.
+
+### Per-course configuration
+
+Use a key called 'duo.nextlesson.target.from'. For example, if you are learning Spanish
+from English use
+
+```
+duo.nextlesson.es.en
+```
