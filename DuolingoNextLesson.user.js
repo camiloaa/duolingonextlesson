@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.2.1
+// @version     1.2.2
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -20,11 +20,11 @@ let K_SECTION = "Xpzj7 _3HLko";
 let K_SUBSECTION = "CDRFO";
 let K_ROW = "_2GJb6";
 let K_CRACKED = "_22Nf9";
-let K_SHORT_NAME = "_21B3_";
+let K_SHORT_NAME = "_378Tf";
 let K_EXERCISE_BUTTON = "_3bahF _3J-7b";
-let K_SKILL_POPUP = "Af4up";
+let K_SKILL_POPUP = "Af4up QmbDT";
 let K_LEVEL_DIV = "I1Bp8";
-let K_LESSONS_DIV = "_1eGmL";
+let K_LESSONS_DIV = "_2yvEQ";
 
 // Read configuration first
 // Kind of weird to read config before defining constants, but it was
@@ -195,7 +195,7 @@ function createLessonButton(skill) {
 
 function selectNextLesson(skill) {
 	var skill_names = Array.prototype.slice.call(document.getElementsByClassName(K_SHORT_NAME));
-	var next_skill = skill_names.filter(name => name.innerText == skill.shortName)[0].parentN(4);
+	var next_skill = skill_names.filter(name => name.innerText == skill.shortName)[0].parentN(3);
 	return next_skill;
 }
 
@@ -223,7 +223,7 @@ function skillURL(skill) {
 /* Move all craked skills to a new section at the begining of the tree */
 function toDoNextSkills(next_skill, move_cracked_skills) {
 	var cracked = Array.prototype.slice.call(document.getElementsByClassName(K_CRACKED))
-	var cracked_skills = cracked.map(item => item.parentN(7));
+	var cracked_skills = cracked.map(item => item.parentN(6));
 	cracked_skills.unshift(next_skill); // Include also next_skill
 	var c_size = 4;
 	var cracked_chunks = Array(Math.ceil(cracked_skills.length / c_size)).fill().map((_, i) => cracked_skills.slice(i * c_size, i * c_size + c_size));
@@ -276,7 +276,9 @@ function onChangeNextLesson(mutationsList) {
 		mutation = mutationsList[i];
 		if (mutation.type === 'childList') {
 			var target = mutation.target;
+			// console.debug(target.className);
 			if (target.className == K_SKILL_POPUP) {
+				// console.debug("New pop-up");
 				var level = target.getElementsByClassName(K_LEVEL_DIV)[0];
 				if (level != null) {
 					var skill_node = level.parentN(4);
