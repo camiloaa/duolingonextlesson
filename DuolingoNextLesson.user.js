@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.2.2
+// @version     1.2.3
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -224,8 +224,8 @@ function skillURL(skill) {
 function toDoNextSkills(next_skill, move_cracked_skills) {
 	var cracked = Array.prototype.slice.call(document.getElementsByClassName(K_CRACKED))
 	var cracked_skills = cracked.map(item => item.parentN(6));
-	cracked_skills.unshift(next_skill); // Include also next_skill
-	var c_size = 4;
+	cracked_skills.push(next_skill); // Include also next_skill
+	let c_size = 3;
 	var cracked_chunks = Array(Math.ceil(cracked_skills.length / c_size)).fill().map((_, i) => cracked_skills.slice(i * c_size, i * c_size + c_size));
 	var section = document.createElement("div")
 	var subsection = document.createElement("div")
