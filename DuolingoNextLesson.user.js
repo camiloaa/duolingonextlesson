@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.2.3
+// @version     1.2.4
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -26,6 +26,10 @@ let K_SKILL_POPUP = "Af4up QmbDT";
 let K_LEVEL_DIV = "I1Bp8";
 let K_LESSONS_DIV = "_2yvEQ";
 
+// Default setup
+let K_MOVE_CRACKED_SKILLS = false;
+let K_AUTO_SCROLL_TO_NEXT = false;
+let K_CREATE_EXERCISE_BUTTON = false;
 // Read configuration first
 // Kind of weird to read config before defining constants, but it was
 // the easiest way I found to keep the constants configurable and constant :-)
@@ -169,8 +173,6 @@ function createLessonButton(skill) {
 
 	// Mark the first elemnt in the tree.
 	// It might be incompatible with other scripts using a similar trick
-	document.getElementsByClassName(K_SKILL_ITEM)[0].id="skill-tree-first-item";
-
 	var button = document.getElementById("next-lesson-button");
 	if (button == null) {
 		button = document.createElement("button");
@@ -201,7 +203,7 @@ function selectNextLesson(skill) {
 
 function clickNextLesson(next_skill)
 {
-	if (GM_getValue("auto_scroll_to_next", true)) {
+	if (GM_getValue("auto_scroll_to_next", K_AUTO_SCROLL_TO_NEXT)) {
 		next_skill.scrollIntoView(false);
 		next_skill.firstChild.firstChild.click();
 	}
@@ -261,12 +263,16 @@ function onChangeNextLesson(mutationsList) {
 	if (duotree.length != 0) {
 		if (document.getElementById("skill-tree-first-item") == null) {
 			// console.debug("[DuolingoNextLesson] You need a new button");
+			document.getElementsByClassName(K_SKILL_ITEM)[0].id="skill-tree-first-item";
+
 			readDuoState();
 			var local_config = readConfig();
 			var next_skill = updateCrownLevel(local_config);
-			createLessonButton(next_skill);
+			if (GM_getValue('create_exercise_button', K_CREATE_EXERCISE_BUTTON)) {
+				createLessonButton(next_skill);
+			}
 			var selected_skill = selectNextLesson(next_skill);
-			toDoNextSkills(selected_skill, GM_getValue('move_cracked_skills', true));
+			toDoNextSkills(selected_skill, GM_getValue('move_cracked_skills', K_MOVE_CRACKED_SKILLS));
 			clickNextLesson(selected_skill);
 		}
 	}
