@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.2.4
+// @version     1.2.5
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -29,7 +29,7 @@ let K_LESSONS_DIV = "_2yvEQ";
 // Default setup
 let K_MOVE_CRACKED_SKILLS = false;
 let K_AUTO_SCROLL_TO_NEXT = false;
-let K_CREATE_EXERCISE_BUTTON = false;
+let K_CREATE_EXERCISE_BUTTON = true;
 // Read configuration first
 // Kind of weird to read config before defining constants, but it was
 // the easiest way I found to keep the constants configurable and constant :-)
@@ -78,7 +78,8 @@ function readDuoState() {
 		duoState.skills[skill].targetCrownLevel = 1;
 		return duoState.skills[skill];
 	}))
-	totalLessons = course_skills.map(x => x.lessons).reduce((a, b) => a + b, 0);
+	var totalLessons = course_skills.map(x => x.lessons).reduce((a, b) => a + b, 0);
+	console.debug("[DuolingoNextLesson] Total vissible lessons: " + totalLessons);
 	course_keys = Object.keys(current_course.trackingProperties);
 	// console.debug("[DuolingoNextLesson] Read the configuration!");
 }
@@ -87,7 +88,7 @@ function readConfig() {
 	let local_config_name = 'duo.nextlesson.' + duoState.user.learningLanguage +
 	'.' + duoState.user.fromLanguage;
 	let default_values = { min_slope: 4, max_slope: 8, max_level: 5, sequential: true };
-	default_config = JSON.parse(GM_getValue("duo.nextlesson", JSON.stringify(default_values)));
+	let default_config = JSON.parse(GM_getValue("duo.nextlesson", JSON.stringify(default_values)));
 	var local_config = JSON.parse(GM_getValue(local_config_name,JSON.stringify(default_config)));
 	// console.debug(local_config)
 	return local_config;
@@ -279,7 +280,7 @@ function onChangeNextLesson(mutationsList) {
 
 	/* List the number of lessons missing in the current level */
 	for (var i = 0; i < mutationsList.length; ++i) {
-		mutation = mutationsList[i];
+		var mutation = mutationsList[i];
 		if (mutation.type === 'childList') {
 			var target = mutation.target;
 			// console.debug(target.className);
@@ -291,10 +292,10 @@ function onChangeNextLesson(mutationsList) {
 					// console.debug(skill_node);
 					var skill_shortName = skill_node.getElementsByClassName(K_SHORT_NAME)[0].innerText;
 					// console.debug("Node " + skill_shortName);
-					var selected_skill = skills.filter(skill => skill.shortName == skill_shortName)[0];
+					var clicked_skill = skills.filter(skill => skill.shortName == skill_shortName)[0];
 					var div = document.createElement('div');
 					div.className = K_LESSONS_DIV;
-					div.innerHTML = "Lessons " + selected_skill.finishedLessons + '/' + selected_skill.lessons;
+					div.innerHTML = "Lessons " + clicked_skill.finishedLessons + '/' + clicked_skill.lessons;
 					level.insertBefore(div, level.firstChild.nextSibling);
 				}
 			}
