@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.2.5
+// @version     1.2.6
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -198,7 +198,7 @@ function createLessonButton(skill) {
 
 function selectNextLesson(skill) {
 	var skill_names = Array.prototype.slice.call(document.getElementsByClassName(K_SHORT_NAME));
-	var next_skill = skill_names.filter(name => name.innerText == skill.shortName)[0].parentN(3);
+	var next_skill = skill_names.filter(name => name.innerHTML == skill.shortName)[0].parentN(3);
 	return next_skill;
 }
 
@@ -290,7 +290,7 @@ function onChangeNextLesson(mutationsList) {
 				if (level != null) {
 					var skill_node = level.parentN(4);
 					// console.debug(skill_node);
-					var skill_shortName = skill_node.getElementsByClassName(K_SHORT_NAME)[0].innerText;
+					var skill_shortName = skill_node.getElementsByClassName(K_SHORT_NAME)[0].innerHTML;
 					// console.debug("Node " + skill_shortName);
 					var clicked_skill = skills.filter(skill => skill.shortName == skill_shortName)[0];
 					var div = document.createElement('div');
