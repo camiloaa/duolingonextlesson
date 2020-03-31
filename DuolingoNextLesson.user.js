@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.2.6
+// @version     1.2.7
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -12,19 +12,18 @@
 // ==/UserScript==
 
 // UI Constants
-let K_SIDE_PANEL = "_21w25 _1E3L7";
-let K_DUOTREE = "i12-l";
-let K_SKILL_ITEM = "QmbDT";
-let K_SMALL_SCREEN_BUTTON = "oNqWF _3hso2 _2Zh2S _1X3l0 _1AM95 H7AnT";
-let K_SECTION = "Xpzj7 _3HLko";
-let K_SUBSECTION = "CDRFO";
-let K_ROW = "_2GJb6";
-let K_CRACKED = "_22Nf9";
-let K_SHORT_NAME = "_378Tf";
-let K_EXERCISE_BUTTON = "_3bahF _3J-7b";
-let K_SKILL_POPUP = "Af4up QmbDT";
-let K_LEVEL_DIV = "I1Bp8";
-let K_LESSONS_DIV = "_2yvEQ";
+let K_DUOTREE = "nae5G";
+let K_SKILL_ITEM = "_2MxuB";
+let K_SMALL_SCREEN_BUTTON = "_1LLpj _3ZQ9H _18se6 vy3TL _3iIWE _1Mkpg _1Dtxl _1sVAI sweRn _1BWZU _1LIf4 QVrnU";
+let K_SECTION = "f1yMM _24RGH";
+let K_SUBSECTION = "_13Apa";
+let K_ROW = "_29Bml";
+let K_CRACKED = "_7WUMp";
+let K_SHORT_NAME = "_1j18D";
+let K_EXERCISE_BUTTON = "_1m9LW _1rwed";
+let K_SKILL_POPUP = "_2iiJH _1DMov";
+let K_LEVEL_DIV = "i6Dfn";
+let K_LESSONS_DIV = "_1XCWf";
 
 // Default setup
 let K_MOVE_CRACKED_SKILLS = false;
@@ -288,7 +287,7 @@ function onChangeNextLesson(mutationsList) {
 				// console.debug("New pop-up");
 				var level = target.getElementsByClassName(K_LEVEL_DIV)[0];
 				if (level != null) {
-					var skill_node = level.parentN(4);
+					var skill_node = level.parentN(5);
 					// console.debug(skill_node);
 					var skill_shortName = skill_node.getElementsByClassName(K_SHORT_NAME)[0].innerHTML;
 					// console.debug("Node " + skill_shortName);
