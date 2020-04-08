@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.2.8
+// @version     1.2.9
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -13,7 +13,6 @@
 
 // UI Constants
 let K_DUOTREE = "nae5G";
-let K_SKILL_ITEM = "_2MxuB";
 let K_SMALL_SCREEN_BUTTON = "_1LLpj _3ZQ9H _18se6 vy3TL _3iIWE _1Mkpg _1Dtxl _1sVAI sweRn _1BWZU _1LIf4 QVrnU";
 let K_SECTION = "f1yMM _24RGH";
 let K_SUBSECTION = "_13Apa";
@@ -73,12 +72,10 @@ function readDuoState() {
 	skills = course_skills.filter(skill => skill.accessible == true &&
 			skill.hasOwnProperty('bonus') == false);
 	current_course = Object.values(duoState.courses).filter(isCurrentCourse)[0];
-	tree = current_course.skills.map(row => row.map (skill => {
+	tree = current_course.skills.map(row => row.map(skill => {
 		duoState.skills[skill].targetCrownLevel = 1;
 		return duoState.skills[skill];
 	}))
-	var totalLessons = course_skills.map(x => x.lessons).reduce((a, b) => a + b, 0);
-	console.debug("[DuolingoNextLesson] Total vissible lessons: " + totalLessons);
 	course_keys = Object.keys(current_course.trackingProperties);
 	// console.debug("[DuolingoNextLesson] Read the configuration!");
 }
@@ -114,7 +111,7 @@ function updateCrownLevel(local_config) {
 	// Give all skills an index.
 	// Makes it easy to find the array possition for any given skill
 	// Calculate progress for all skills
-	skills.map((skill, index) => { skill.index = index;
+	skills.forEach((skill, index) => { skill.index = index;
 		return skill.currentProgress = skill.finishedLevels +
 		1 - skill.progressRemaining.reduce( (acc,val) => acc = acc + val, 0 ) });
 
@@ -142,7 +139,7 @@ function updateCrownLevel(local_config) {
 			first_skill.currentProgress + 0.1));
 
 	// console.debug("[DuolingoNextLesson] Offset: "+ offset+ "   Target: " + targetCrownLevel + "   Slope:" + slope + "  Step:" + step);
-	skills.map(applyStep, {offset: offset, max_level: targetCrownLevel, step: step});
+	skills.forEach(applyStep, {offset: offset, max_level: targetCrownLevel, step: step});
 
 	// Complete skills in unlocked rows sequentially
 	if ( sequential_tree && last_row.length > 1) {
@@ -162,10 +159,12 @@ function updateCrownLevel(local_config) {
 
 // This dead code is here an not at the bottom of the file so I can easily
 // copy-paste the important parts of the script into firefox.
-// var local_config = {min_slope: 2, max_slope: 6, max_level: 4.8, sequential: true};
-// var local_config = readDuoState(); updateCrownLevel(local_config);
-// skills.map(x => res = {w: x.crownWeight, n: x.shortName})
-// skills.map(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.currentProgress, n: x.shortName })
+// var local_config = {min_slope: 2, max_slope: 2, max_level: 5, sequential: true};
+// readDuoState(); updateCrownLevel(local_config);
+// skills.forEach(x => res = {w: x.crownWeight, n: x.shortName})
+// skills.forEach(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.currentProgress, n: x.shortName })
+// var totalLessons = course_skills.map(x => x.lessons).reduce((a, b) => a + b, 0);
+// console.debug("[DuolingoNextLesson] Total vissible lessons: " + totalLessons);
 // skills.filter( (skill, i, a) => i > 0 ? skill.row != a[i - 1].row : true ).map(skill => skill.targetCrownLevel)
 
 function createLessonButton(skill) {
@@ -189,16 +188,22 @@ function createLessonButton(skill) {
 	};
 	// console.debug("[DuolingoNextLesson] No side panel");
 	button.className = K_SMALL_SCREEN_BUTTON
-		+ " reverse-tree-enhancer-button";
+		+ " duolingonextlesson";
 	button.style = "visibility: visible;" +
 		"border-left-width: 1px; ";
 	exercise_button.appendChild(button);
 }
 
-function selectNextLesson(skill) {
+function tagAllSkills() {
 	var skill_names = Array.prototype.slice.call(document.getElementsByClassName(K_SHORT_NAME));
-	var next_skill = skill_names.filter(name => name.innerHTML == skill.shortName)[0].parentN(3);
-	return next_skill;
+	var skill_index = 0;
+	skill_names.forEach(skill => {
+		// Ignore bonus skills
+		if (skill.textContent == skills[skill_index].shortName) {
+			skills[skill_index].shortNameElement = skill;
+			skill_index++;
+		}
+	})
 }
 
 function clickNextLesson(next_skill)
@@ -224,20 +229,19 @@ function skillURL(skill) {
 
 /* Move all craked skills to a new section at the begining of the tree */
 function toDoNextSkills(next_skill, move_cracked_skills) {
-	var cracked = Array.prototype.slice.call(document.getElementsByClassName(K_CRACKED))
-	var cracked_skills = cracked.map(item => item.parentN(6));
+	var cracked_skills = skills.filter(skill => skill.decayed == true).map(skill => skill.shortNameElement.parentN(3));
 	cracked_skills.push(next_skill); // Include also next_skill
 	let c_size = 3;
 	var cracked_chunks = Array(Math.ceil(cracked_skills.length / c_size)).fill().map((_, i) => cracked_skills.slice(i * c_size, i * c_size + c_size));
 	var section = document.createElement("div")
 	var subsection = document.createElement("div")
 	var firstsect = document.getElementsByClassName(K_SECTION)[0];
-	section.className = K_SECTION;
-	subsection.className = K_SUBSECTION;
+	section.className = K_SECTION + " duolingonextlesson";
+	subsection.className = K_SUBSECTION + " duolingonextlesson";
 	firstsect.parentElement.insertBefore(section, firstsect);
 	var rows = cracked_chunks.map(chunk => {
 		var row = document.createElement("div");
-		row.className = K_ROW;
+		row.className = K_ROW  + " duolingonextlesson";
 		if (move_cracked_skills) {
 			// Remove elements from the tree
 			chunk.forEach(item => row.appendChild(item));
@@ -253,7 +257,46 @@ function toDoNextSkills(next_skill, move_cracked_skills) {
 		return row;
 	})
 	section.appendChild(subsection)
-	rows.map(row => subsection.appendChild(row));
+	rows.forEach(row => subsection.appendChild(row));
+}
+
+function findNextLesson() {
+	// console.debug("[DuolingoNextLesson] You need a new button");
+	// Remove all old elements
+	var to_remove = document.getElementsByClassName("duolingonextlesson");
+	while (to_remove[0]) {
+		to_remove[0].parentNode.removeChild(to_remove[0]);
+	}
+	document.getElementsByClassName(K_SHORT_NAME)[0].parentNode.id = "skill-tree-first-item";
+
+	// Find the next lesson to study
+	readDuoState();
+	var local_config = readConfig();
+	var next_skill = updateCrownLevel(local_config);
+	tagAllSkills();
+	if (GM_getValue('create_exercise_button', K_CREATE_EXERCISE_BUTTON)) {
+		createLessonButton(next_skill);
+	}
+	var selected_skill = next_skill.shortNameElement.parentN(3);
+	toDoNextSkills(selected_skill, GM_getValue('move_cracked_skills', K_MOVE_CRACKED_SKILLS));
+	clickNextLesson(selected_skill);
+}
+
+function addLessonCount(target) {
+	// console.debug("New pop-up");
+	var level = target.getElementsByClassName(K_LEVEL_DIV)[0];
+	if (level != null) {
+		var skill_node = level.parentN(4);
+		// console.debug(skill_node);
+		var selected_shortName = skill_node.getElementsByClassName(K_SHORT_NAME)[0];
+		var selected_skill = skills.filter(skill => skill.shortNameElement == selected_shortName)[0];
+		// console.debug("[DuolingoNextLesson] Selected skill: " + selected_shortName.textContent);
+		// console.debug(selected_skill);
+		var div = document.createElement('div');
+		div.className = K_LESSONS_DIV + " duolingonextlesson";
+		div.innerText = "Lessons " + selected_skill.finishedLessons + '/' + selected_skill.lessons;
+		level.insertBefore(div, level.firstChild.nextSibling);
+	}
 }
 
 function onChangeNextLesson(mutationsList) {
@@ -262,18 +305,7 @@ function onChangeNextLesson(mutationsList) {
 	/* Add a "NEXT LESSON" button when necessary */
 	if (duotree.length != 0) {
 		if (document.getElementById("skill-tree-first-item") == null) {
-			// console.debug("[DuolingoNextLesson] You need a new button");
-			document.getElementsByClassName(K_SKILL_ITEM)[0].id="skill-tree-first-item";
-
-			readDuoState();
-			var local_config = readConfig();
-			var next_skill = updateCrownLevel(local_config);
-			if (GM_getValue('create_exercise_button', K_CREATE_EXERCISE_BUTTON)) {
-				createLessonButton(next_skill);
-			}
-			var selected_skill = selectNextLesson(next_skill);
-			toDoNextSkills(selected_skill, GM_getValue('move_cracked_skills', K_MOVE_CRACKED_SKILLS));
-			clickNextLesson(selected_skill);
+			findNextLesson();
 		}
 	}
 
@@ -284,23 +316,10 @@ function onChangeNextLesson(mutationsList) {
 			var target = mutation.target;
 			// console.debug(target.className);
 			if (target.className == K_SKILL_POPUP) {
-				// console.debug("New pop-up");
-				var level = target.getElementsByClassName(K_LEVEL_DIV)[0];
-				if (level != null) {
-					var skill_node = level.parentN(4);
-					// console.debug(skill_node);
-					var skill_shortName = skill_node.getElementsByClassName(K_SHORT_NAME)[0].innerHTML;
-					// console.debug("Node " + skill_shortName);
-					var clicked_skill = skills.filter(skill => skill.shortName == skill_shortName)[0];
-					var div = document.createElement('div');
-					div.className = K_LESSONS_DIV;
-					div.innerHTML = "Lessons " + clicked_skill.finishedLessons + '/' + clicked_skill.lessons;
-					level.insertBefore(div, level.firstChild.nextSibling);
-				}
+				addLessonCount(target);
 			}
 		}
 	}
-
 }
 
 new MutationObserver(onChangeNextLesson).observe(document.body, {
