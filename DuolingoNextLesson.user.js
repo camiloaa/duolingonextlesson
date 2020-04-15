@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.2.9
+// @version     1.2.10
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -20,9 +20,6 @@ let K_ROW = "_29Bml";
 let K_CRACKED = "_7WUMp";
 let K_SHORT_NAME = "_1j18D";
 let K_EXERCISE_BUTTON = "_1m9LW _1rwed";
-let K_SKILL_POPUP = "_2iiJH _1DMov";
-let K_LEVEL_DIV = "i6Dfn";
-let K_LESSONS_DIV = "_1XCWf";
 
 // Default setup
 let K_MOVE_CRACKED_SKILLS = false;
@@ -113,7 +110,7 @@ function updateCrownLevel(local_config) {
 	// Calculate progress for all skills
 	skills.forEach((skill, index) => { skill.index = index;
 		return skill.currentProgress = skill.finishedLevels +
-		1 - skill.progressRemaining.reduce( (acc,val) => acc = acc + val, 0 ) });
+		skill.finishedLessons/skill.lessons });
 
 	let active_skills = skills.filter(skill => skill.currentProgress < max_level);
 	if (active_skills.length == 0)
@@ -282,23 +279,6 @@ function findNextLesson() {
 	clickNextLesson(selected_skill);
 }
 
-function addLessonCount(target) {
-	// console.debug("New pop-up");
-	var level = target.getElementsByClassName(K_LEVEL_DIV)[0];
-	if (level != null) {
-		var skill_node = level.parentN(4);
-		// console.debug(skill_node);
-		var selected_shortName = skill_node.getElementsByClassName(K_SHORT_NAME)[0];
-		var selected_skill = skills.filter(skill => skill.shortNameElement == selected_shortName)[0];
-		// console.debug("[DuolingoNextLesson] Selected skill: " + selected_shortName.textContent);
-		// console.debug(selected_skill);
-		var div = document.createElement('div');
-		div.className = K_LESSONS_DIV + " duolingonextlesson";
-		div.innerText = "Lessons " + selected_skill.finishedLessons + '/' + selected_skill.lessons;
-		level.insertBefore(div, level.firstChild.nextSibling);
-	}
-}
-
 function onChangeNextLesson(mutationsList) {
 	var duotree = document.getElementsByClassName(K_DUOTREE);
 
@@ -313,11 +293,8 @@ function onChangeNextLesson(mutationsList) {
 	for (var i = 0; i < mutationsList.length; ++i) {
 		var mutation = mutationsList[i];
 		if (mutation.type === 'childList') {
-			var target = mutation.target;
+			// var target = mutation.target;
 			// console.debug(target.className);
-			if (target.className == K_SKILL_POPUP) {
-				addLessonCount(target);
-			}
 		}
 	}
 }
