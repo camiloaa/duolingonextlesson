@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.2.10
+// @version     1.2.11
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -12,14 +12,15 @@
 // ==/UserScript==
 
 // UI Constants
-let K_DUOTREE = "nae5G";
-let K_SMALL_SCREEN_BUTTON = "_1LLpj _3ZQ9H _18se6 vy3TL _3iIWE _1Mkpg _1Dtxl _1sVAI sweRn _1BWZU _1LIf4 QVrnU";
-let K_SECTION = "f1yMM _24RGH";
-let K_SUBSECTION = "_13Apa";
-let K_ROW = "_29Bml";
-let K_CRACKED = "_7WUMp";
 let K_SHORT_NAME = "_1j18D";
-let K_EXERCISE_BUTTON = "_1m9LW _1rwed";
+let K_DUO_TREE_DATA_TEST = "skill-tree";
+let K_SKILL_DATA_TEST = "skill";
+let K_PRACTICE_BUTTON_DATA_TEST = "global-practice";
+let K_TREE_SECTION_DATA_TEST = "tree-section";
+
+let K_PLUGIN_NAME = "DuolingoNextLesson";
+let K_FIRST_SKILL_ITEM_ID = "skill-tree-first-item";
+let K_NEXT_LESSON_BUTTON_ID = "next-lesson-button";
 
 // Default setup
 let K_MOVE_CRACKED_SKILLS = false;
@@ -46,8 +47,8 @@ var course_keys = [];
 // "{\"min_slope\":2,\"max_slope\":6,\"max_level\":4.8,\"sequential\":true}"
 
 
-Array.prototype.randomElement = function () {
-    return this[Math.floor(Math.random() * this.length)]
+Array.prototype.randomElement = function() {
+	return this[Math.floor(Math.random() * this.length)]
 }
 
 Element.prototype.parentN = function(n) {
@@ -57,8 +58,7 @@ Element.prototype.parentN = function(n) {
 	return this.parentElement.parentN(n - 1);
 }
 
-function isCurrentCourse(x)
-{
+function isCurrentCourse(x) {
 	return x.learningLanguage === duoState.user.learningLanguage &&
 		x.fromLanguage === duoState.user.fromLanguage;
 }
@@ -67,35 +67,29 @@ function readDuoState() {
 	duoState = JSON.parse(localStorage['duo.state']);
 	course_skills = Object.values(duoState.skills).filter(isCurrentCourse);
 	skills = course_skills.filter(skill => skill.accessible == true &&
-			skill.hasOwnProperty('bonus') == false);
+		skill.hasOwnProperty('bonus') == false);
 	current_course = Object.values(duoState.courses).filter(isCurrentCourse)[0];
 	tree = current_course.skills.map(row => row.map(skill => {
 		duoState.skills[skill].targetCrownLevel = 1;
 		return duoState.skills[skill];
 	}))
 	course_keys = Object.keys(current_course.trackingProperties);
-	// console.debug("[DuolingoNextLesson] Read the configuration!");
+	log("Read the configuration!");
 }
 
 function readConfig() {
 	let local_config_name = 'duo.nextlesson.' + duoState.user.learningLanguage +
-	'.' + duoState.user.fromLanguage;
-	let default_values = { min_slope: 4, max_slope: 8, max_level: 5, sequential: true };
+		'.' + duoState.user.fromLanguage;
+	let default_values = {
+		min_slope: 4,
+		max_slope: 8,
+		max_level: 5,
+		sequential: true
+	};
 	let default_config = JSON.parse(GM_getValue("duo.nextlesson", JSON.stringify(default_values)));
-	var local_config = JSON.parse(GM_getValue(local_config_name,JSON.stringify(default_config)));
-	// console.debug(local_config)
+	var local_config = JSON.parse(GM_getValue(local_config_name, JSON.stringify(default_config)));
+	log(local_config)
 	return local_config;
-}
-
-function applyStep(skill, index) {
-	// 1 ≤ currentProgress ≤ TargetCrownLevel ≤ max_level
-	skill.targetCrownLevel = Math.max(
-			Math.min(this.max_level - this.step * (index - this.offset),
-			this.max_level), skill.currentProgress);
-
-	skill.crownWeight = skill.targetCrownLevel - skill.currentProgress;
-	// console.debug("[DuolingoNextLesson] S:" + skill.shortName + " " + index + " T:" + skill.targetCrownLevel + " W:" + skill.crownWeight);
-	return skill;
 }
 
 function updateCrownLevel(local_config) {
@@ -106,51 +100,57 @@ function updateCrownLevel(local_config) {
 	let max_level = parseFloat(local_config.max_level);
 
 	// Give all skills an index.
-	// Makes it easy to find the array possition for any given skill
-	// Calculate progress for all skills
-	skills.forEach((skill, index) => { skill.index = index;
-		return skill.currentProgress = skill.finishedLevels +
-		skill.finishedLessons/skill.lessons });
+	// Calculate progress for all skills (note: finished skills get currentProgress 6 instead of 5. Does not matter for us)
+	skills.forEach((skill, index) => {
+		skill.index = index;
+		return skill.currentProgress = skill.finishedLevels + skill.finishedLessons / skill.lessons;
+	});
 
 	let active_skills = skills.filter(skill => skill.currentProgress < max_level);
-	if (active_skills.length == 0)
-	{
-		// console.debug("[DuolingoNextLesson: Finished tree")
-		return skills.randomElement()
+	if (active_skills.length == 0) {
+		log("Finished tree, random skill selection");
+		return skills.randomElement();
 	}
 	let last_skill = skills[skills.length - 1];
-	let last_row = skills.filter(skill => skill.row == last_skill.row && skill.finishedLevels == 0);
-	let first_skill = active_skills.length > 0 ? active_skills[0]: skills[0];
-	let offset = first_skill.index;
+	let first_skill = active_skills.length > 0 ? active_skills[0] : skills[0];
+	let current_slope = last_skill.row - first_skill.row;
 
-	let max_diff = max_level - last_skill.currentProgress;
-
-	let slope = Math.max(
-		Math.min(max_diff * course_skills.length / (skills.length - offset),
-		max_slope), min_slope);
-
-	let step = slope / course_skills.length;
-
-	let targetCrownLevel = Math.min(
-		max_level, Math.max(skills.length * step + last_skill.currentProgress + 0.1,
-			first_skill.currentProgress + 0.1));
-
-	// console.debug("[DuolingoNextLesson] Offset: "+ offset+ "   Target: " + targetCrownLevel + "   Slope:" + slope + "  Step:" + step);
-	skills.forEach(applyStep, {offset: offset, max_level: targetCrownLevel, step: step});
-
-	// Complete skills in unlocked rows sequentially
-	if ( sequential_tree && last_row.length > 1) {
-		for (let index = 1; index < last_row.length; index++) {
-			last_row[index].crownWeight = 0;
-		}
+	// apply "correct slope" strategy
+	if (current_slope < min_slope) {
+	    // slope too low -> prefer opening new skills, pick from last row
+	    active_skills = active_skills.filter(skill => skill.row == last_skill.row);
+	} else if (current_slope > max_slope) {
+        // slope too high - cut off opened skills that should not be trained yet
+        let max_row = first_skill.row + max_slope;
+        active_skills = active_skills.filter(skill => skill.row < max_row);
 	}
 
-	var max_weight = skills.reduce( (acc,skill) => acc = Math.max(acc, skill.crownWeight), 0);
-	// console.debug("[DuolingoNextLesson] Max weight: " + max_weight);
-	// console.debug(skills.filter(skill => skill.crownWeight >= (max_weight - 0.1)));
-	var next_skill = skills.filter(skill => skill.crownWeight > 0 && skill.crownWeight >= (max_weight - 0.1)).randomElement();
-	// console.debug("[DuolingoNextLesson] Next skill: " + next_skill.shortName);
-	// console.debug(skills);
+	let target_crown_level_step = (max_level - 1) / (max_slope - 1);
+    active_skills.forEach((skill) => {
+        row_distance_from_first_skill = skill.row - first_skill.row;
+        skill.targetCrownLevel = max_level - row_distance_from_first_skill * target_crown_level_step;
+        skill.crownWeight = (skill.targetCrownLevel - skill.currentProgress).toFixed(1);
+    });
+
+	// Complete skills in unlocked rows sequentially
+	if (sequential_tree) {
+        let last_row = skills.filter(skill => skill.row == last_skill.row);
+	    if (last_row.length > 1) {
+	    	for (let index = 1; index < last_row.length; index++) {
+	    		last_row[index].crownWeight = 0;
+	    	}
+	    }
+	}
+
+	// select random skill with the highest crown weight
+	var max_weight = active_skills.reduce((acc,skill) => acc = Math.max(acc, skill.crownWeight), 0);
+	var candidate_skills = active_skills.filter(skill => skill.crownWeight == max_weight);
+	var next_skill = candidate_skills.randomElement();
+	log(new Map([
+	    ["Max weight", max_weight],
+	    ["Selected skill", next_skill.shortName],
+	    [ "Candidate skills", candidate_skills]
+	]));
 	return next_skill;
 }
 
@@ -161,34 +161,45 @@ function updateCrownLevel(local_config) {
 // skills.forEach(x => res = {w: x.crownWeight, n: x.shortName})
 // skills.forEach(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.currentProgress, n: x.shortName })
 // var totalLessons = course_skills.map(x => x.lessons).reduce((a, b) => a + b, 0);
-// console.debug("[DuolingoNextLesson] Total vissible lessons: " + totalLessons);
+// log("[DuolingoNextLesson] Total visible lessons: " + totalLessons);
 // skills.filter( (skill, i, a) => i > 0 ? skill.row != a[i - 1].row : true ).map(skill => skill.targetCrownLevel)
 
-function createLessonButton(skill) {
-	var exercise_button = document.getElementsByClassName(K_EXERCISE_BUTTON)[0];
-
-	// Mark the first elemnt in the tree.
-	// It might be incompatible with other scripts using a similar trick
-	var button = document.getElementById("next-lesson-button");
-	if (button == null) {
-		button = document.createElement("button");
-	} else {
+/**
+ * Removes obsolete "Start next lesson" button if such exists
+ */
+function removeObsoleteNextLessonButton() {
+	var button = document.getElementById(K_NEXT_LESSON_BUTTON_ID);
+	if (button != null) {
 		exercise_button.removeChild(button);
-		button = document.createElement("button");
 	}
-	// Configure the next lesson button
-	button.id = "next-lesson-button";
+}
+
+function createLessonButton(skill) {
+	removeObsoleteNextLessonButton()
+
+	// get any existing button to copy styling from
+	var anyButton = document.querySelector("button");
+
+	// prepare the next lesson button
+	var button = document.createElement("button");
+	button.id = K_NEXT_LESSON_BUTTON_ID;
 	button.type = "button";
 	button.textContent = "Start " + skill.shortName;
-	button.onclick = function () {
+	button.onclick = function() {
 		window.location.href = skillURL(skill);
 	};
-	// console.debug("[DuolingoNextLesson] No side panel");
-	button.className = K_SMALL_SCREEN_BUTTON
-		+ " duolingonextlesson";
-	button.style = "visibility: visible;" +
-		"border-left-width: 1px; ";
-	exercise_button.appendChild(button);
+	button.className = anyButton.className;
+	button.style = "width: auto;";
+
+	// append button into place
+	getPracticeAnchor().parentElement.appendChild(button);
+
+}
+
+function selectNextLesson(skill) {
+	var skill_names = Array.prototype.slice.call(document.getElementsByClassName(K_SHORT_NAME));
+	var next_skill = skill_names.filter(name => name.innerHTML == skill.shortName)[0].parentN(3);
+	return next_skill;
 }
 
 function tagAllSkills() {
@@ -203,8 +214,7 @@ function tagAllSkills() {
 	})
 }
 
-function clickNextLesson(next_skill)
-{
+function clickNextLesson(next_skill) {
 	if (GM_getValue("auto_scroll_to_next", K_AUTO_SCROLL_TO_NEXT)) {
 		next_skill.scrollIntoView(false);
 		next_skill.firstChild.firstChild.click();
@@ -217,14 +227,14 @@ function skillURL(skill) {
 		skill.learningLanguage + "/" +
 		skill.urlName + "/"
 	if (skill.finishedLevels < 5) {
-		URL = URL +	(1+skill.finishedLessons);
+		URL = URL + (1 + skill.finishedLessons);
 	} else {
 		URL = URL + "practice"
 	}
 	return URL;
 }
 
-/* Move all craked skills to a new section at the begining of the tree */
+/* Move all cracked skills to a new section at the beginning of the tree */
 function toDoNextSkills(next_skill, move_cracked_skills) {
 	var cracked_skills = skills.filter(skill => skill.decayed == true).map(skill => skill.shortNameElement.parentN(3));
 	cracked_skills.push(next_skill); // Include also next_skill
@@ -232,13 +242,13 @@ function toDoNextSkills(next_skill, move_cracked_skills) {
 	var cracked_chunks = Array(Math.ceil(cracked_skills.length / c_size)).fill().map((_, i) => cracked_skills.slice(i * c_size, i * c_size + c_size));
 	var section = document.createElement("div")
 	var subsection = document.createElement("div")
-	var firstsect = document.getElementsByClassName(K_SECTION)[0];
-	section.className = K_SECTION + " duolingonextlesson";
-	subsection.className = K_SUBSECTION + " duolingonextlesson";
-	firstsect.parentElement.insertBefore(section, firstsect);
+	var firstSection = getTreeSection();
+	section.className = firstSection.className;
+	subsection.className = getTreeSubsectionClass();
+	firstSection.parentElement.insertBefore(section, firstSection);
 	var rows = cracked_chunks.map(chunk => {
 		var row = document.createElement("div");
-		row.className = K_ROW  + " duolingonextlesson";
+		row.className = getRowClass();
 		if (move_cracked_skills) {
 			// Remove elements from the tree
 			chunk.forEach(item => row.appendChild(item));
@@ -257,46 +267,63 @@ function toDoNextSkills(next_skill, move_cracked_skills) {
 	rows.forEach(row => subsection.appendChild(row));
 }
 
-function findNextLesson() {
-	// console.debug("[DuolingoNextLesson] You need a new button");
-	// Remove all old elements
-	var to_remove = document.getElementsByClassName("duolingonextlesson");
-	while (to_remove[0]) {
-		to_remove[0].parentNode.removeChild(to_remove[0]);
-	}
-	document.getElementsByClassName(K_SHORT_NAME)[0].parentNode.id = "skill-tree-first-item";
+function log(textToLog) {
+	console.debug("[" + K_PLUGIN_NAME + "]: %o", textToLog);
+}
 
-	// Find the next lesson to study
-	readDuoState();
-	var local_config = readConfig();
-	var next_skill = updateCrownLevel(local_config);
-	tagAllSkills();
-	if (GM_getValue('create_exercise_button', K_CREATE_EXERCISE_BUTTON)) {
-		createLessonButton(next_skill);
-	}
-	var selected_skill = next_skill.shortNameElement.parentN(3);
-	toDoNextSkills(selected_skill, GM_getValue('move_cracked_skills', K_MOVE_CRACKED_SKILLS));
-	clickNextLesson(selected_skill);
+function getFirstElementByDataTestValue(data_test) {
+	return document.querySelector("*[data-test='" + data_test + "']");
+}
+
+function getDuoTree() {
+	// <div data-test="skill-tree" class="nae5G">
+	return getFirstElementByDataTestValue(K_DUO_TREE_DATA_TEST);
+}
+
+function getFirstSkill() {
+	// <div class="_2iiJH _1DMov" data-test="skill">
+	return getFirstElementByDataTestValue(K_SKILL_DATA_TEST);
+}
+
+function getPracticeAnchor() {
+	// <a data-test="global-practice" ... >
+	return getFirstElementByDataTestValue(K_PRACTICE_BUTTON_DATA_TEST);
+}
+
+function getTreeSection() {
+	// <div class="f1yMM _24RGH" data-test="tree-section">
+	return getFirstElementByDataTestValue(K_TREE_SECTION_DATA_TEST);
+}
+
+function getTreeSubsectionClass() {
+	return getTreeSection().firstChild.className;
+}
+
+function getRowClass() {
+	return getFirstSkill().parentElement.className;
 }
 
 function onChangeNextLesson(mutationsList) {
-	var duotree = document.getElementsByClassName(K_DUOTREE);
 
 	/* Add a "NEXT LESSON" button when necessary */
-	if (duotree.length != 0) {
-		if (document.getElementById("skill-tree-first-item") == null) {
-			findNextLesson();
+	if (getDuoTree() != null) {
+		if (document.getElementById(K_FIRST_SKILL_ITEM_ID) == null) {
+			// log("New button required");
+			getFirstSkill().id = K_FIRST_SKILL_ITEM_ID;
+
+			readDuoState();
+			var local_config = readConfig();
+			var next_skill = updateCrownLevel(local_config);
+			tagAllSkills();
+			if (GM_getValue('create_exercise_button', K_CREATE_EXERCISE_BUTTON)) {
+				createLessonButton(next_skill);
+			}
+			var selected_skill = selectNextLesson(next_skill);
+			toDoNextSkills(selected_skill, GM_getValue('move_cracked_skills', K_MOVE_CRACKED_SKILLS));
+			clickNextLesson(selected_skill);
 		}
 	}
 
-	/* List the number of lessons missing in the current level */
-	for (var i = 0; i < mutationsList.length; ++i) {
-		var mutation = mutationsList[i];
-		if (mutation.type === 'childList') {
-			// var target = mutation.target;
-			// console.debug(target.className);
-		}
-	}
 }
 
 new MutationObserver(onChangeNextLesson).observe(document.body, {
@@ -304,5 +331,4 @@ new MutationObserver(onChangeNextLesson).observe(document.body, {
 	subtree: true
 });
 
-console.debug("DuolingoNextLesson version " + GM_info.script.version
-	+ " ready");
+log("version " + GM_info.script.version + " ready");
