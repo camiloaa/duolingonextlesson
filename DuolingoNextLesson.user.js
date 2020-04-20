@@ -3,7 +3,7 @@
 // @namespace   local
 // @include     https://www.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.2.10
+// @version     1.2.11
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @grant       GM_getValue
 // @grant       GM_setValue
@@ -20,6 +20,8 @@ let K_ROW = "_29Bml";
 let K_CRACKED = "_7WUMp";
 let K_SHORT_NAME = "_1j18D";
 let K_EXERCISE_BUTTON = "_1m9LW _1rwed";
+
+let K_PLUGIN_NAME = "DuolingoNextLesson";
 
 // Default setup
 let K_MOVE_CRACKED_SKILLS = false;
@@ -74,7 +76,7 @@ function readDuoState() {
 		return duoState.skills[skill];
 	}))
 	course_keys = Object.keys(current_course.trackingProperties);
-	// console.debug("[DuolingoNextLesson] Read the configuration!");
+	// log("Read the configuration!");
 }
 
 function readConfig() {
@@ -83,7 +85,7 @@ function readConfig() {
 	let default_values = { min_slope: 4, max_slope: 8, max_level: 5, sequential: true };
 	let default_config = JSON.parse(GM_getValue("duo.nextlesson", JSON.stringify(default_values)));
 	var local_config = JSON.parse(GM_getValue(local_config_name,JSON.stringify(default_config)));
-	// console.debug(local_config)
+	// log(local_config)
 	return local_config;
 }
 
@@ -94,7 +96,7 @@ function applyStep(skill, index) {
 			this.max_level), skill.currentProgress);
 
 	skill.crownWeight = skill.targetCrownLevel - skill.currentProgress;
-	// console.debug("[DuolingoNextLesson] S:" + skill.shortName + " " + index + " T:" + skill.targetCrownLevel + " W:" + skill.crownWeight);
+	// log("S:" + skill.shortName + " " + index + " T:" + skill.targetCrownLevel + " W:" + skill.crownWeight);
 	return skill;
 }
 
@@ -106,7 +108,7 @@ function updateCrownLevel(local_config) {
 	let max_level = parseFloat(local_config.max_level);
 
 	// Give all skills an index.
-	// Makes it easy to find the array possition for any given skill
+	// Makes it easy to find the array position for any given skill
 	// Calculate progress for all skills
 	skills.forEach((skill, index) => { skill.index = index;
 		return skill.currentProgress = skill.finishedLevels +
@@ -115,7 +117,7 @@ function updateCrownLevel(local_config) {
 	let active_skills = skills.filter(skill => skill.currentProgress < max_level);
 	if (active_skills.length == 0)
 	{
-		// console.debug("[DuolingoNextLesson: Finished tree")
+		// log("Finished tree, random skill selection");
 		return skills.randomElement()
 	}
 	let last_skill = skills[skills.length - 1];
@@ -135,7 +137,7 @@ function updateCrownLevel(local_config) {
 		max_level, Math.max(skills.length * step + last_skill.currentProgress + 0.1,
 			first_skill.currentProgress + 0.1));
 
-	// console.debug("[DuolingoNextLesson] Offset: "+ offset+ "   Target: " + targetCrownLevel + "   Slope:" + slope + "  Step:" + step);
+	// log("Offset: "+ offset+ "   Target: " + targetCrownLevel + "   Slope:" + slope + "  Step:" + step);
 	skills.forEach(applyStep, {offset: offset, max_level: targetCrownLevel, step: step});
 
 	// Complete skills in unlocked rows sequentially
@@ -146,11 +148,11 @@ function updateCrownLevel(local_config) {
 	}
 
 	var max_weight = skills.reduce( (acc,skill) => acc = Math.max(acc, skill.crownWeight), 0);
-	// console.debug("[DuolingoNextLesson] Max weight: " + max_weight);
-	// console.debug(skills.filter(skill => skill.crownWeight >= (max_weight - 0.1)));
+	// log("Max weight: " + max_weight);
+	// log(skills.filter(skill => skill.crownWeight >= (max_weight - 0.1)));
 	var next_skill = skills.filter(skill => skill.crownWeight > 0 && skill.crownWeight >= (max_weight - 0.1)).randomElement();
-	// console.debug("[DuolingoNextLesson] Next skill: " + next_skill.shortName);
-	// console.debug(skills);
+	// log("Next skill: " + next_skill.shortName);
+	// log(skills);
 	return next_skill;
 }
 
@@ -161,13 +163,13 @@ function updateCrownLevel(local_config) {
 // skills.forEach(x => res = {w: x.crownWeight, n: x.shortName})
 // skills.forEach(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.currentProgress, n: x.shortName })
 // var totalLessons = course_skills.map(x => x.lessons).reduce((a, b) => a + b, 0);
-// console.debug("[DuolingoNextLesson] Total vissible lessons: " + totalLessons);
+// log("Total visible lessons: " + totalLessons);
 // skills.filter( (skill, i, a) => i > 0 ? skill.row != a[i - 1].row : true ).map(skill => skill.targetCrownLevel)
 
 function createLessonButton(skill) {
 	var exercise_button = document.getElementsByClassName(K_EXERCISE_BUTTON)[0];
 
-	// Mark the first elemnt in the tree.
+	// Mark the first element in the tree.
 	// It might be incompatible with other scripts using a similar trick
 	var button = document.getElementById("next-lesson-button");
 	if (button == null) {
@@ -183,7 +185,7 @@ function createLessonButton(skill) {
 	button.onclick = function () {
 		window.location.href = skillURL(skill);
 	};
-	// console.debug("[DuolingoNextLesson] No side panel");
+	// log("No side panel");
 	button.className = K_SMALL_SCREEN_BUTTON
 		+ " duolingonextlesson";
 	button.style = "visibility: visible;" +
@@ -224,7 +226,7 @@ function skillURL(skill) {
 	return URL;
 }
 
-/* Move all craked skills to a new section at the begining of the tree */
+/* Move all cracked skills to a new section at the beginning of the tree */
 function toDoNextSkills(next_skill, move_cracked_skills) {
 	var cracked_skills = skills.filter(skill => skill.decayed == true).map(skill => skill.shortNameElement.parentN(3));
 	cracked_skills.push(next_skill); // Include also next_skill
@@ -258,7 +260,7 @@ function toDoNextSkills(next_skill, move_cracked_skills) {
 }
 
 function findNextLesson() {
-	// console.debug("[DuolingoNextLesson] You need a new button");
+	// log("You need a new button");
 	// Remove all old elements
 	var to_remove = document.getElementsByClassName("duolingonextlesson");
 	while (to_remove[0]) {
@@ -294,9 +296,13 @@ function onChangeNextLesson(mutationsList) {
 		var mutation = mutationsList[i];
 		if (mutation.type === 'childList') {
 			// var target = mutation.target;
-			// console.debug(target.className);
+			// log(target.className);
 		}
 	}
+}
+
+function log(objectToLog) {
+	console.debug("[" + K_PLUGIN_NAME + "]: %o", objectToLog);
 }
 
 new MutationObserver(onChangeNextLesson).observe(document.body, {
@@ -304,5 +310,4 @@ new MutationObserver(onChangeNextLesson).observe(document.body, {
 	subtree: true
 });
 
-console.debug("DuolingoNextLesson version " + GM_info.script.version
-	+ " ready");
+log("version " + GM_info.script.version + " ready");
