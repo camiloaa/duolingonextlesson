@@ -37,6 +37,16 @@ var current_course = {};
 var tree = [];
 var course_keys = [];
 
+// Restore console
+var i = document.createElement('iframe');
+i.style.display = 'none';
+document.body.appendChild(i);
+myconsole = i.contentWindow.console;
+
+function log(objectToLog) {
+	myconsole.debug("[" + K_PLUGIN_NAME + "]: %o", objectToLog);
+}
+
 // max_slope/min_slope: Maximum and minimum difference in crowns between
 //		the first active skill and the last skill in the course
 //		Higher slope means you have to repeat earlier lessons first.
@@ -299,10 +309,6 @@ function onChangeNextLesson(mutationsList) {
 			// log(target.className);
 		}
 	}
-}
-
-function log(objectToLog) {
-	console.debug("[" + K_PLUGIN_NAME + "]: %o", objectToLog);
 }
 
 new MutationObserver(onChangeNextLesson).observe(document.body, {
