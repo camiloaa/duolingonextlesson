@@ -4,7 +4,7 @@
 // @include     https://www.duolingo.com/learn
 // @include     https://preview.duolingo.com/learn
 // @author      Camilo Arboleda
-// @version     1.2.12
+// @version     1.3.0
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @copyright   2018+ Camilo Arboleda
 // @license     https://github.com/camiloaa/duolingonextlesson/raw/master/LICENSE
@@ -30,9 +30,7 @@ let K_PLUGIN_NAME = "DuolingoNextLesson";
 let K_MOVE_CRACKED_SKILLS = false;
 let K_AUTO_SCROLL_TO_NEXT = false;
 let K_CREATE_EXERCISE_BUTTON = true;
-// Read configuration first
-// Kind of weird to read config before defining constants, but it was
-// the easiest way I found to keep the constants configurable and constant :-)
+// Global variables. Here lives the devil
 var duoState = {};
 var course_skills = [];
 var skills = [];
@@ -50,30 +48,29 @@ function log(objectToLog) {
 	myconsole.debug("[" + K_PLUGIN_NAME + "]: %o", objectToLog);
 }
 
-// max_slope/min_slope: Maximum and minimum difference in crowns between
-//		the first active skill and the last skill in the course
+// max_slope/min_slope: Maximum and minimum number of segments the course
+//		should be split into. One segment is split at a time.
 //		Higher slope means you have to repeat earlier lessons first.
 //		Lower slope means you can advance the course faster.
 // max_level: level you want to reach in all skills
 // sequential: Complete the tree left to right
 //
-// duo.nextleson
+// duo.nextlesson
 // "{\"min_slope\":2,\"max_slope\":6,\"max_level\":4.8,\"sequential\":true}"
 
 
 Array.prototype.randomElement = function () {
-    return this[Math.floor(Math.random() * this.length)]
+	return this[Math.floor(Math.random() * this.length)]
 }
 
-Element.prototype.parentN = function(n) {
+Element.prototype.parentN = function (n) {
 	if (parseInt(n) <= 0) {
 		return this;
 	}
 	return this.parentElement.parentN(n - 1);
 }
 
-function isCurrentCourse(x)
-{
+function isCurrentCourse(x) {
 	return x.learningLanguage === duoState.user.learningLanguage &&
 		x.fromLanguage === duoState.user.fromLanguage;
 }
@@ -81,23 +78,25 @@ function isCurrentCourse(x)
 function readDuoState() {
 	duoState = JSON.parse(localStorage['duo.state']);
 	course_skills = Object.values(duoState.skills).filter(isCurrentCourse);
-	skills = course_skills.filter(skill => skill.accessible == true &&
-			skill.hasOwnProperty('bonus') == false);
-	current_course = Object.values(duoState.courses).filter(isCurrentCourse)[0];
-	tree = current_course.skills.map(row => row.map(skill => {
-		duoState.skills[skill].targetCrownLevel = 1;
-		return duoState.skills[skill];
-	}))
-	course_keys = Object.keys(current_course.trackingProperties);
+	skills = course_skills.filter(skill => skill.hasOwnProperty('bonus') == false);
+
+	// Give all skills an index.
+	// Makes it easy to find the array position for any given skill
+	// Calculate progress for all skills
+	skills.forEach((skill, index) => {
+		skill.index = index;
+		skill.currentProgress = skill.finishedLevels +
+			skill.finishedLessons / skill.lessons
+	});
 	// log("Read the configuration!");
 }
 
 function readConfig() {
 	let local_config_name = 'duo.nextlesson.' + duoState.user.learningLanguage +
-	'.' + duoState.user.fromLanguage;
-	let default_values = { min_slope: 4, max_slope: 8, max_level: 5, sequential: true };
+		'.' + duoState.user.fromLanguage;
+	let default_values = { min_slope: 2, max_slope: 6, max_level: 5, sequential: true };
 	let default_config = JSON.parse(GM_getValue("duo.nextlesson", JSON.stringify(default_values)));
-	var local_config = JSON.parse(GM_getValue(local_config_name,JSON.stringify(default_config)));
+	var local_config = JSON.parse(GM_getValue(local_config_name, JSON.stringify(default_config)));
 	// log(local_config)
 	return local_config;
 }
@@ -105,8 +104,8 @@ function readConfig() {
 function applyStep(skill, index) {
 	// 1 ≤ currentProgress ≤ TargetCrownLevel ≤ max_level
 	skill.targetCrownLevel = Math.max(
-			Math.min(this.max_level - this.step * (index - this.offset),
-			this.max_level), skill.currentProgress);
+		Math.min(this.target_level - this.step * (index),
+			this.target_level), skill.currentProgress);
 
 	skill.crownWeight = skill.targetCrownLevel - skill.currentProgress;
 	// log("S:" + skill.shortName + " " + index + " T:" + skill.targetCrownLevel + " W:" + skill.crownWeight);
@@ -119,48 +118,39 @@ function updateCrownLevel(local_config) {
 	let min_slope = parseFloat(local_config.min_slope);
 	let sequential_tree = local_config.sequential;
 	let max_level = parseFloat(local_config.max_level);
+	// Calculate the desired slope values
+	let min_step = max_level / Math.ceil(skills.length / min_slope);
+	let max_step = max_level / Math.ceil(skills.length / max_slope);
+	// log("Min step:" + min_step + " Max step:" + max_step)
 
-	// Give all skills an index.
-	// Makes it easy to find the array position for any given skill
-	// Calculate progress for all skills
-	skills.forEach((skill, index) => { skill.index = index;
-		return skill.currentProgress = skill.finishedLevels +
-		skill.finishedLessons/skill.lessons });
-
-	let active_skills = skills.filter(skill => skill.currentProgress < max_level);
-	if (active_skills.length == 0)
-	{
+	let active_skills = skills.filter(skill =>
+		(skill.currentProgress < max_level) && (skill.accessible == true));
+	if (active_skills.length == 0) {
 		// log("Finished tree, random skill selection");
 		return skills.randomElement()
 	}
-	let last_skill = skills[skills.length - 1];
-	let last_row = skills.filter(skill => skill.row == last_skill.row && skill.finishedLevels == 0);
-	let first_skill = active_skills.length > 0 ? active_skills[0]: skills[0];
-	let offset = first_skill.index;
+	let last_skill = active_skills[active_skills.length - 1];
+	let last_row = active_skills.filter(skill => skill.row == last_skill.row && skill.finishedLevels == 0);
+	let first_skill = active_skills[0];
+	let active_segment = last_skill.index - first_skill.index;
+	let last_skill_progress = (last_skill == skills[skills.length - 1]) ? last_skill.currentProgress : 0;
+	let active_step = (first_skill.currentProgress - last_skill_progress) / active_segment;
+	// log("First Skill: " + first_skill.shortName + " " +  first_skill.currentProgress + " Last Skill:" + last_skill.shortName + " " +  last_skill_progress);
+	// log("Segment length: " + active_segment + " Step: " + active_step);
 
-	let max_diff = max_level - last_skill.currentProgress;
+	let step = Math.max(Math.min(active_step, max_step), min_step);
 
-	let slope = Math.max(
-		Math.min(max_diff * course_skills.length / (skills.length - offset),
-		max_slope), min_slope);
-
-	let step = slope / course_skills.length;
-
-	let targetCrownLevel = Math.min(
-		max_level, Math.max(skills.length * step + last_skill.currentProgress + 0.1,
-			first_skill.currentProgress + 0.1));
-
-	// log("Offset: "+ offset+ "   Target: " + targetCrownLevel + "   Slope:" + slope + "  Step:" + step);
-	skills.forEach(applyStep, {offset: offset, max_level: targetCrownLevel, step: step});
+	// log("Step:" + step);
+	active_skills.forEach(applyStep, { target_level: max_level, step: step });
 
 	// Complete skills in unlocked rows sequentially
-	if ( sequential_tree && last_row.length > 1) {
+	if (sequential_tree && last_row.length > 1) {
 		for (let index = 1; index < last_row.length; index++) {
 			last_row[index].crownWeight = 0;
 		}
 	}
 
-	var max_weight = skills.reduce( (acc,skill) => acc = Math.max(acc, skill.crownWeight), 0);
+	var max_weight = active_skills.reduce((acc, skill) => acc = Math.max(acc, skill.crownWeight), 0);
 	// log("Max weight: " + max_weight);
 	// log(skills.filter(skill => skill.crownWeight >= (max_weight - 0.1)));
 	var next_skill = skills.filter(skill => skill.crownWeight > 0 && skill.crownWeight >= (max_weight - 0.1)).randomElement();
@@ -218,8 +208,7 @@ function tagAllSkills() {
 	})
 }
 
-function clickNextLesson(next_skill)
-{
+function clickNextLesson(next_skill) {
 	if (GM_getValue("auto_scroll_to_next", K_AUTO_SCROLL_TO_NEXT)) {
 		next_skill.scrollIntoView(false);
 		next_skill.firstChild.firstChild.click();
@@ -232,7 +221,7 @@ function skillURL(skill) {
 		skill.learningLanguage + "/" +
 		skill.urlName + "/"
 	if (skill.finishedLevels < 5) {
-		URL = URL +	(1+skill.finishedLessons);
+		URL = URL + (1 + skill.finishedLessons);
 	} else {
 		URL = URL + "practice"
 	}
@@ -253,7 +242,7 @@ function toDoNextSkills(next_skill, move_cracked_skills) {
 	firstsect.parentElement.insertBefore(section, firstsect);
 	var rows = cracked_chunks.map(chunk => {
 		var row = document.createElement("div");
-		row.className = K_ROW  + " duolingonextlesson";
+		row.className = K_ROW + " duolingonextlesson";
 		if (move_cracked_skills) {
 			// Remove elements from the tree
 			chunk.forEach(item => row.appendChild(item));

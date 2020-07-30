@@ -59,11 +59,16 @@ That's it, if you add the next key/value pair, nothing will change.
 
 ```
 key: duo.nextlesson
-value:  "{\"min_slope\":4,\"max_slope\":8,\"max_level\":5,\"sequential\":true}"
+value:  "{\"min_slope\":2.0,\"max_slope\":6.0,\"max_level\":5.0,\"sequential\":true}"
 ```
 
 By changing the min_slope and max_slope values, you can decide how much emphasis you want to put
 on repetition vs new lessons.
+
+A slope of 1 means that you will reach level 5 in the first lesson, at the same time you are
+finishing the last lesson of the tree. A slope of 2 means that you will reach level 5 for the
+first lesson when you are around 1/2 of the tree. A slope of 5 will do it at 1/5th and so on.
+Slope has to be a positive number, but it doesn't have to be an integer.
 
 A low value will mean you get more new lessons, and probably a mostly blue tree at the end.
 
