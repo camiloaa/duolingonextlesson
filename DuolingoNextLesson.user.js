@@ -1,10 +1,13 @@
 // ==UserScript==
 // @name        Duolingo Next Lesson
 // @namespace   local
-// @include     https://www.duolingo.com/*
+// @include     https://www.duolingo.com/learn
+// @include     https://preview.duolingo.com/learn
 // @author      Camilo Arboleda
-// @version     1.2.11
+// @version     1.2.12
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
+// @copyright   2018+ Camilo Arboleda
+// @license     https://github.com/camiloaa/duolingonextlesson/raw/master/LICENSE
 // @grant       GM_getValue
 // @grant       GM_setValue
 // @downloadURL https://github.com/camiloaa/duolingonextlesson/raw/master/DuolingoNextLesson.user.js
