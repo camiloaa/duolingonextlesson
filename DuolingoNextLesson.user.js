@@ -4,7 +4,7 @@
 // @include     https://www.duolingo.com/*
 // @include     https://preview.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.3.2-pre2
+// @version     1.3.2
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @copyright   2018+ Camilo Arboleda
 // @license     https://github.com/camiloaa/duolingonextlesson/raw/master/LICENSE
@@ -121,7 +121,9 @@ function readDuoState() {
 	// log("readDuoState");
 	duoState = JSON.parse(localStorage['duo.state']);
 	course_skills = Object.values(duoState.skills).filter(isCurrentCourse);
-	skills = course_skills.filter(skill => skill.hasOwnProperty('bonus') == false);
+	skills = course_skills.filter(skill => // Ignore bonus and grammar skills
+		skill.hasOwnProperty('bonus') == false
+		&& skill.hasOwnProperty('grammar') == false);
 
 	// Give all skills an index.
 	// Makes it easy to find the array position for any given skill
