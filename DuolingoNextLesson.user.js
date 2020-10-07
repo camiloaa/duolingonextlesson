@@ -4,7 +4,7 @@
 // @include     https://www.duolingo.com/*
 // @include     https://preview.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.3.2-pre1
+// @version     1.3.2-pre2
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @copyright   2018+ Camilo Arboleda
 // @license     https://github.com/camiloaa/duolingonextlesson/raw/master/LICENSE
@@ -261,10 +261,13 @@ function tagAllSkills() {
 	})
 }
 
-function clickNextLesson(next_skill) {
-	if (GM_getValue("auto_scroll_to_next", K_AUTO_SCROLL_TO_NEXT)) {
+function clickNextLesson(todo_section) {
+	if (GM_getValue("auto_scroll_to_next", todo_section.length == 1)) {
+		const next_skill = todo_section.randomElement();
 		next_skill.scrollIntoView(false);
 		next_skill.firstChild.firstChild.click();
+	} else{
+		window.scrollTo(0,0);
 	}
 }
 
@@ -314,6 +317,7 @@ function toDoNextSkills(next_skill, move_cracked_skills) {
 	})
 	section.appendChild(subsection)
 	rows.forEach(row => subsection.appendChild(row));
+	return cracked_skills;
 }
 
 function findNextLesson() {
@@ -333,9 +337,10 @@ function findNextLesson() {
 	if (GM_getValue('create_exercise_button', K_CREATE_EXERCISE_BUTTON)) {
 		createLessonButton(next_skill);
 	}
-	var selected_skill = next_skill.shortNameElement.parentN(3);
-	toDoNextSkills(selected_skill, GM_getValue('move_cracked_skills', K_MOVE_CRACKED_SKILLS));
-	clickNextLesson(selected_skill);
+	const selected_skill = next_skill.shortNameElement.parentN(3);
+	const todo_section = toDoNextSkills(selected_skill,
+			GM_getValue('move_cracked_skills', K_MOVE_CRACKED_SKILLS));
+	clickNextLesson(todo_section);
 }
 
 function onChangeNextLesson(mutationsList) {

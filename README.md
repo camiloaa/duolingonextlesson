@@ -34,10 +34,13 @@ Instructions are for ViolentMonkey, but other script managers have similar funct
 3. Select the + icon to add new configuration options    
 ![Values](screenshots/Values.png)
 
-### Do not auto-scroll to the recommended lesson
+### Overwrite auto-scroll behavior
 
 If you don't like your duolingo tree auto-scrolling to the recommended lesson, you can
-disable the feature adding new key 'auto_scroll_to_next' with value 'false'.
+disable the feature adding a new key 'auto_scroll_to_next' with value 'false'.
+
+You can also set the value to 'true' if you want it to always scroll to the
+recommended skill, independetly of cracked skills or not.
 
 ### Move recommended skills to the top
 
