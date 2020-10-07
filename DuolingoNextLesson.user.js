@@ -4,7 +4,7 @@
 // @include     https://www.duolingo.com/*
 // @include     https://preview.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.3.1
+// @version     1.3.2-pre1
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @copyright   2018+ Camilo Arboleda
 // @license     https://github.com/camiloaa/duolingonextlesson/raw/master/LICENSE
@@ -151,7 +151,8 @@ function applyStep(skill, index) {
 			this.target_level), skill.currentProgress);
 
 	skill.crownWeight = skill.targetCrownLevel - skill.currentProgress;
-	// log("S:" + skill.shortName + " " + index + " T:" + skill.targetCrownLevel.toFixed(4) + " W:" + skill.crownWeight.toFixed(4));
+	// log("S:" + skill.shortName + " " + index + " T:" + skill.targetCrownLevel.toFixed(4)
+	//		+ " W:" + skill.crownWeight.toFixed(4));
 	return skill;
 }
 
@@ -173,12 +174,15 @@ function updateCrownLevel(local_config) {
 		return skills.randomElement()
 	}
 	let last_skill = active_skills[active_skills.length - 1];
-	let last_row = active_skills.filter(skill => skill.row == last_skill.row && skill.finishedLevels == 0);
+	let last_row = active_skills.filter(skill =>
+			skill.row == last_skill.row && skill.finishedLevels == 0);
 	let first_skill = active_skills[0];
 	let active_segment = last_skill.index - first_skill.index;
-	let last_skill_progress = (last_skill == skills[skills.length - 1]) ? last_skill.currentProgress : 0;
+	let last_skill_progress = (last_skill == skills[skills.length - 1]) ?
+			last_skill.currentProgress : 0;
 	let active_step = (first_skill.currentProgress - last_skill_progress) / active_segment;
-	// log("First Skill: " + first_skill.shortName + " " +  first_skill.currentProgress + " Last Skill:" + last_skill.shortName + " " +  last_skill_progress);
+	// log("First Skill: " + first_skill.shortName + " " +  first_skill.currentProgress
+	//		+ " Last Skill:" + last_skill.shortName + " " +  last_skill_progress);
 	// log("Segment length: " + active_segment + " Step: " + active_step.toFixed(4));
 
 	let step = Math.max(Math.min(active_step, max_step), min_step);
@@ -193,10 +197,12 @@ function updateCrownLevel(local_config) {
 		}
 	}
 
-	var max_weight = active_skills.reduce((acc, skill) => acc = Math.max(acc, skill.crownWeight), 0);
+	var max_weight = active_skills.reduce((acc, skill) =>
+			acc = Math.max(acc, skill.crownWeight), 0);
 	// log("Max weight: " + max_weight.toFixed(4));
 	// log(skills.filter(skill => skill.crownWeight >= (max_weight - 0.1)));
-	var next_skill = skills.filter(skill => skill.crownWeight > 0 && skill.crownWeight >= (max_weight - 0.1)).randomElement();
+	var next_skill = skills.filter(skill =>
+			skill.crownWeight > 0 && skill.crownWeight>= (max_weight - 0.1)).randomElement();
 	// log("Next skill: " + next_skill.shortName);
 	// log(skills);
 	return next_skill;
@@ -276,10 +282,12 @@ function skillURL(skill) {
 
 /* Move all cracked skills to a new section at the beginning of the tree */
 function toDoNextSkills(next_skill, move_cracked_skills) {
-	var cracked_skills = skills.filter(skill => skill.decayed == true).map(skill => skill.shortNameElement.parentN(3));
+	var cracked_skills = skills.filter(skill =>skill.decayed == true)
+			.map(skill => skill.shortNameElement.parentN(3));
 	cracked_skills.push(next_skill); // Include also next_skill
 	let c_size = 3;
-	var cracked_chunks = Array(Math.ceil(cracked_skills.length / c_size)).fill().map((_, i) => cracked_skills.slice(i * c_size, i * c_size + c_size));
+	var cracked_chunks = Array(Math.ceil(cracked_skills.length / c_size))
+			.fill().map((_, i) => cracked_skills.slice(i * c_size, i * c_size + c_size));
 	var section = document.createElement("div")
 	var subsection = document.createElement("div")
 	var firstSection = getTreeSection();
@@ -297,7 +305,8 @@ function toDoNextSkills(next_skill, move_cracked_skills) {
 			chunk.forEach(item => {
 				var cloned = item.cloneNode(true);
 				var my_keys = Object.keys(item.firstChild.firstChild);
-				my_keys.forEach(key => cloned.firstChild.firstChild[key] = item.firstChild.firstChild[key]);
+				my_keys.forEach(key => cloned.firstChild.firstChild[key]
+						= item.firstChild.firstChild[key]);
 				row.appendChild(cloned);
 			});
 		}
