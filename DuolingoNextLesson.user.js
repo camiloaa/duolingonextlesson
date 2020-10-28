@@ -4,7 +4,7 @@
 // @include     https://www.duolingo.com/*
 // @include     https://preview.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.3.2
+// @version     1.3.3
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @copyright   2018+ Camilo Arboleda
 // @license     https://github.com/camiloaa/duolingonextlesson/raw/master/LICENSE
@@ -65,8 +65,20 @@ function log(objectToLog) {
 // UI-elements Section
 // --------------------------------------
 
-Array.prototype.randomElement = function () {
-	return this[Math.floor(Math.random() * this.length)]
+/* Random number generator for small numer */
+function rnumber(max) {
+	const r = Math.floor(Math.random() * 1000) % max;
+	return r;
+}
+
+/* Chi-square random number generator for single digit numbers */
+function chi_rnumber(max) {
+	var x = rnumber(max*3);
+	while ((x >= max) && (x>0)) {
+		x = x - max;
+		max--;
+	}
+	return x;
 }
 
 Element.prototype.parentN = function (n) {
@@ -160,51 +172,47 @@ function applyStep(skill, index) {
 
 function updateCrownLevel(local_config) {
 	// Read configuration
-	let max_slope = parseFloat(local_config.max_slope);
-	let min_slope = parseFloat(local_config.min_slope);
-	let sequential_tree = local_config.sequential;
-	let max_level = parseFloat(local_config.max_level);
+	const max_slope = parseFloat(local_config.max_slope);
+	const min_slope = parseFloat(local_config.min_slope);
+	const sequential_tree = local_config.sequential;
+	const max_level = parseFloat(local_config.max_level);
 	// Calculate the desired slope values
-	let min_step = max_level / Math.ceil(skills.length / min_slope);
-	let max_step = max_level / Math.ceil(skills.length / max_slope);
+	const min_step = max_level / Math.ceil(skills.length / min_slope);
+	const max_step = max_level / Math.ceil(skills.length / max_slope);
 	// log("MinS:" + min_step.toFixed(4) + " MaxS:" + max_step.toFixed(4))
 
 	let active_skills = skills.filter(skill =>
 		(skill.currentProgress < max_level) && (skill.accessible == true));
 	if (active_skills.length == 0) {
 		// log("Finished tree, random skill selection");
-		return skills.randomElement()
+		return skills[rnumber(skills.length)]
 	}
-	let last_skill = active_skills[active_skills.length - 1];
+	const last_skill = active_skills[active_skills.length - 1];
 	let last_row = active_skills.filter(skill =>
 			skill.row == last_skill.row && skill.finishedLevels == 0);
-	let first_skill = active_skills[0];
-	let active_segment = last_skill.index - first_skill.index;
-	let last_skill_progress = (last_skill == skills[skills.length - 1]) ?
+	const first_skill = active_skills[0];
+	const active_segment = last_skill.index - first_skill.index;
+	const last_skill_progress = (last_skill == skills[skills.length - 1]) ?
 			last_skill.currentProgress : 0;
-	let active_step = (first_skill.currentProgress - last_skill_progress) / active_segment;
+	const active_step = (first_skill.currentProgress - last_skill_progress) / active_segment;
 	// log("First Skill: " + first_skill.shortName + " " +  first_skill.currentProgress
 	//		+ " Last Skill:" + last_skill.shortName + " " +  last_skill_progress);
 	// log("Segment length: " + active_segment + " Step: " + active_step.toFixed(4));
 
-	let step = Math.max(Math.min(active_step, max_step), min_step);
+	const step = Math.max(Math.min(active_step, max_step), min_step);
 
 	// log("Step:" + step);
 	active_skills.forEach(applyStep, { target_level: max_level, step: step });
 
 	// Complete skills in unlocked rows sequentially
-	if (sequential_tree && last_row.length > 1) {
-		for (let index = 1; index < last_row.length; index++) {
-			last_row[index].crownWeight = 0;
-		}
+	if (sequential_tree && (last_row.length > 0)) {
+		last_row.forEach(skill => {skill.bcw = skill.crownWeight; skill.crownWeight = 0});
+		last_row[0].crownWeight = last_row[0].bcw;
 	}
-
-	var max_weight = active_skills.reduce((acc, skill) =>
-			acc = Math.max(acc, skill.crownWeight), 0);
-	// log("Max weight: " + max_weight.toFixed(4));
-	// log(skills.filter(skill => skill.crownWeight >= (max_weight - 0.1)));
-	var next_skill = skills.filter(skill =>
-			skill.crownWeight > 0 && skill.crownWeight>= (max_weight - 0.1)).randomElement();
+	var max_weight = active_skills.sort((a, b) =>
+			{return b.crownWeight - a.crownWeight; }).slice(0,5);
+	// log(max_weight);
+	var next_skill = max_weight[chi_rnumber(max_weight.length)];
 	// log("Next skill: " + next_skill.shortName);
 	// log(skills);
 	return next_skill;
@@ -265,7 +273,7 @@ function tagAllSkills() {
 
 function clickNextLesson(todo_section) {
 	if (GM_getValue("auto_scroll_to_next", todo_section.length == 1)) {
-		const next_skill = todo_section.randomElement();
+		const next_skill = todo_section[rnumber(todo_section.length)];
 		next_skill.scrollIntoView(false);
 		next_skill.firstChild.firstChild.click();
 	} else{
@@ -349,9 +357,13 @@ function onChangeNextLesson(mutationsList) {
 
 	/* Add a "NEXT LESSON" button when necessary */
 	if (getDuoTree() != null) {
+		// log("There is a tree");
 		if (document.getElementById(K_FIRST_SKILL_ITEM_ID) == null) {
+			// log("Find next lesson");
 			findNextLesson();
 		}
+	} else {
+		// log("There is a change but no tree");
 	}
 
 	/* List the number of lessons missing in the current level */
