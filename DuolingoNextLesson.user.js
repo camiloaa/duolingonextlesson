@@ -4,7 +4,7 @@
 // @include     https://www.duolingo.com/*
 // @include     https://preview.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.3.3
+// @version     1.3.4
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @copyright   2018+ Camilo Arboleda
 // @license     https://github.com/camiloaa/duolingonextlesson/raw/master/LICENSE
@@ -181,8 +181,19 @@ function updateCrownLevel(local_config) {
 	const max_step = max_level / Math.ceil(skills.length / max_slope);
 	// log("MinS:" + min_step.toFixed(4) + " MaxS:" + max_step.toFixed(4))
 
+	skills.forEach(skill =>{
+		if (max_level > 0) {
+			skill.maxLevel = max_level;
+		} else {
+			if (skill.finishedLevels < (-1 *max_level) - 1) {
+				skill.maxLevel = -1 * max_level - 0.2;
+			} else {
+				skill.maxLevel = -1 * max_level - 1 / skill.lessons;
+			}
+		}
+	} )
 	let active_skills = skills.filter(skill =>
-		(skill.currentProgress < max_level) && (skill.accessible == true));
+		(skill.currentProgress < skill.maxLevel) && (skill.accessible == true));
 	if (active_skills.length == 0) {
 		// log("Finished tree, random skill selection");
 		return skills[rnumber(skills.length)]
