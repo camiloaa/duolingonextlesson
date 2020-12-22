@@ -4,7 +4,7 @@
 // @include     https://www.duolingo.com/*
 // @include     https://preview.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.3.4
+// @version     1.3.5
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @copyright   2018+ Camilo Arboleda
 // @license     https://github.com/camiloaa/duolingonextlesson/raw/master/LICENSE
@@ -161,8 +161,8 @@ function readConfig() {
 function applyStep(skill, index) {
 	// 1 ≤ currentProgress ≤ TargetCrownLevel ≤ max_level
 	skill.targetCrownLevel = Math.max(
-		Math.min(this.target_level - this.step * (index),
-			this.target_level), skill.currentProgress);
+		Math.min(skill.maxLevel - this.step * (index),
+			skill.maxLevel), skill.currentProgress);
 
 	skill.crownWeight = skill.targetCrownLevel - skill.currentProgress;
 	// log("S:" + skill.shortName + " " + index + " T:" + skill.targetCrownLevel.toFixed(4)
@@ -177,18 +177,18 @@ function updateCrownLevel(local_config) {
 	const sequential_tree = local_config.sequential;
 	const max_level = parseFloat(local_config.max_level);
 	// Calculate the desired slope values
-	const min_step = max_level / Math.ceil(skills.length / min_slope);
-	const max_step = max_level / Math.ceil(skills.length / max_slope);
+	const min_step = Math.abs(max_level) / Math.ceil(skills.length / min_slope);
+	const max_step = Math.abs(max_level) / Math.ceil(skills.length / max_slope);
 	// log("MinS:" + min_step.toFixed(4) + " MaxS:" + max_step.toFixed(4))
 
 	skills.forEach(skill =>{
 		if (max_level > 0) {
 			skill.maxLevel = max_level;
 		} else {
-			if (skill.finishedLevels < (-1 *max_level) - 1) {
-				skill.maxLevel = -1 * max_level - 0.2;
+			if (skill.finishedLevels < Math.abs(max_level) - 1) {
+				skill.maxLevel = Math.abs(max_level) - 0.2;
 			} else {
-				skill.maxLevel = -1 * max_level - 1 / skill.lessons;
+				skill.maxLevel = Math.abs(max_level) - 1 / skill.lessons;
 			}
 		}
 	} )
@@ -213,7 +213,7 @@ function updateCrownLevel(local_config) {
 	const step = Math.max(Math.min(active_step, max_step), min_step);
 
 	// log("Step:" + step);
-	active_skills.forEach(applyStep, { target_level: max_level, step: step });
+	active_skills.forEach(applyStep, { step: step });
 
 	// Complete skills in unlocked rows sequentially
 	if (sequential_tree && (last_row.length > 0)) {
