@@ -4,7 +4,7 @@
 // @include     https://www.duolingo.com/*
 // @include     https://preview.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.3.5
+// @version     1.3.6
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @copyright   2018+ Camilo Arboleda
 // @license     https://github.com/camiloaa/duolingonextlesson/raw/master/LICENSE
@@ -29,7 +29,6 @@ let K_NEXT_LESSON_BUTTON_ID = "next-lesson-button";
 
 // Default setup
 let K_MOVE_CRACKED_SKILLS = false;
-let K_AUTO_SCROLL_TO_NEXT = false;
 let K_CREATE_EXERCISE_BUTTON = true;
 // Read configuration first
 // Kind of weird to read config before defining constants, but it was
@@ -133,9 +132,10 @@ function readDuoState() {
 	// log("readDuoState");
 	duoState = JSON.parse(localStorage['duo.state']);
 	course_skills = Object.values(duoState.skills).filter(isCurrentCourse);
-	skills = course_skills.filter(skill => // Ignore bonus and grammar skills
-		skill.hasOwnProperty('bonus') == false
-		&& skill.hasOwnProperty('grammar') == false);
+	skills = course_skills.filter(skill => // Ignore inaccessible bonus and grammar skills
+		!skill.hasOwnProperty('bonus')
+		&& !skill.hasOwnProperty('grammar')
+		|| skill.accessible);
 
 	// Give all skills an index.
 	// Makes it easy to find the array position for any given skill
@@ -160,10 +160,15 @@ function readConfig() {
 
 function applyStep(skill, index) {
 	// 1 ≤ currentProgress ≤ TargetCrownLevel ≤ max_level
-	skill.targetCrownLevel = Math.max(
-		Math.min(skill.maxLevel - this.step * (index),
-			skill.maxLevel), skill.currentProgress);
-
+	skill.targetCrownLevel = Math.max(skill.maxLevel - this.step * (index), 0);
+	if (skill.hasOwnProperty('bonus')) {
+		// Bonus skills have no levels
+		skill.targetCrownLevel = Math.min(skill.targetCrownLevel, 1.0);
+	} else if (skill.hasOwnProperty('grammar')) {
+		// Grammar skills have only two levels
+		skill.targetCrownLevel = Math.min(skill.targetCrownLevel, 2.0);
+	}
+	skill.targetCrownLevel = Math.max(skill.targetCrownLevel, skill.currentProgress);
 	skill.crownWeight = skill.targetCrownLevel - skill.currentProgress;
 	// log("S:" + skill.shortName + " " + index + " T:" + skill.targetCrownLevel.toFixed(4)
 	//		+ " W:" + skill.crownWeight.toFixed(4));
@@ -181,7 +186,7 @@ function updateCrownLevel(local_config) {
 	const max_step = Math.abs(max_level) / Math.ceil(skills.length / max_slope);
 	// log("MinS:" + min_step.toFixed(4) + " MaxS:" + max_step.toFixed(4))
 
-	skills.forEach(skill =>{
+	skills.forEach(skill => {
 		if (max_level > 0) {
 			skill.maxLevel = max_level;
 		} else {
@@ -235,7 +240,7 @@ function updateCrownLevel(local_config) {
 // readDuoState(); updateCrownLevel(local_config);
 // skills.forEach(x => res = {w: x.crownWeight, n: x.shortName})
 // skills.forEach(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.currentProgress, n: x.shortName })
-// var totalLessons = course_skills.map(x => x.lessons).reduce((a, b) => a + b, 0);
+// var totalLessons = skills.map(x => x.lessons).reduce((a, b) => a + b, 0);
 // log("Total visible lessons: " + totalLessons);
 // skills.filter( (skill, i, a) => i > 0 ? skill.row != a[i - 1].row : true ).map(skill => skill.targetCrownLevel)
 
@@ -274,7 +279,6 @@ function tagAllSkills() {
 	var skill_names = Array.prototype.slice.call(document.getElementsByClassName(K_SHORT_NAME));
 	var skill_index = 0;
 	skill_names.forEach(skill => {
-		// Ignore bonus skills
 		if (skill.textContent == skills[skill_index].shortName) {
 			skills[skill_index].shortNameElement = skill;
 			skill_index++;
