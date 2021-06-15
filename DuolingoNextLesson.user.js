@@ -41,13 +41,17 @@ var tree = [];
 var course_keys = [];
 
 // Restore console
-var i = document.createElement('iframe');
-i.style.display = 'none';
-document.body.appendChild(i);
-myconsole = i.contentWindow.console;
+var _i = document.createElement('iframe');
+_i.style.display = 'none';
+document.body.appendChild(_i);
+console_alt = _i.contentWindow.console;
 
-function log(objectToLog) {
-	myconsole.debug("[" + K_PLUGIN_NAME + "]: %o", objectToLog);
+function debug(objectToLog) {
+	console_alt.debug("[" + K_PLUGIN_NAME + "]: %o", objectToLog);
+}
+
+function info(objectToLog) {
+    console_alt.info("[" + K_PLUGIN_NAME + "]: %o", objectToLog);
 }
 
 // max_slope/min_slope: Maximum and minimum number of segments the course
@@ -129,7 +133,7 @@ function isCurrentCourse(x) {
 }
 
 function readDuoState() {
-	// log("readDuoState");
+	//debug("readDuoState");
 	duoState = JSON.parse(localStorage['duo.state']);
 	course_skills = Object.values(duoState.skills).filter(isCurrentCourse);
 	skills = course_skills.filter(skill => // Ignore inaccessible bonus and grammar skills
@@ -145,7 +149,7 @@ function readDuoState() {
 		skill.currentProgress = skill.finishedLevels +
 			skill.finishedLessons / skill.lessons
 	});
-	// log("Read the configuration!");
+	//debug("Read the configuration!");
 }
 
 function readConfig() {
@@ -154,7 +158,7 @@ function readConfig() {
 	let default_values = { min_slope: 2, max_slope: 6, max_level: 5, sequential: true };
 	let default_config = JSON.parse(GM_getValue("duo.nextlesson", JSON.stringify(default_values)));
 	var local_config = JSON.parse(GM_getValue(local_config_name, JSON.stringify(default_config)));
-	// log(local_config)
+	//debug(local_config)
 	return local_config;
 }
 
@@ -170,7 +174,7 @@ function applyStep(skill, index) {
 	}
 	skill.targetCrownLevel = Math.max(skill.targetCrownLevel, skill.currentProgress);
 	skill.crownWeight = skill.targetCrownLevel - skill.currentProgress;
-	// log("S:" + skill.shortName + " " + index + " T:" + skill.targetCrownLevel.toFixed(4)
+	//debug("S:" + skill.shortName + " " + index + " T:" + skill.targetCrownLevel.toFixed(4)
 	//		+ " W:" + skill.crownWeight.toFixed(4));
 	return skill;
 }
@@ -184,7 +188,7 @@ function updateCrownLevel(local_config) {
 	// Calculate the desired slope values
 	const min_step = Math.abs(max_level) / Math.ceil(skills.length / min_slope);
 	const max_step = Math.abs(max_level) / Math.ceil(skills.length / max_slope);
-	// log("MinS:" + min_step.toFixed(4) + " MaxS:" + max_step.toFixed(4))
+	//debug("MinS:" + min_step.toFixed(4) + " MaxS:" + max_step.toFixed(4))
 
 	skills.forEach(skill => {
 		if (max_level > 0) {
@@ -200,7 +204,7 @@ function updateCrownLevel(local_config) {
 	let active_skills = skills.filter(skill =>
 		(skill.currentProgress < skill.maxLevel) && (skill.accessible == true));
 	if (active_skills.length == 0) {
-		// log("Finished tree, random skill selection");
+		//debug("Finished tree, random skill selection");
 		return skills[rnumber(skills.length)]
 	}
 	const last_skill = active_skills[active_skills.length - 1];
@@ -211,13 +215,13 @@ function updateCrownLevel(local_config) {
 	const last_skill_progress = (last_skill == skills[skills.length - 1]) ?
 			last_skill.currentProgress : 0;
 	const active_step = (first_skill.currentProgress - last_skill_progress) / active_segment;
-	// log("First Skill: " + first_skill.shortName + " " +  first_skill.currentProgress
+	//debug("First Skill: " + first_skill.shortName + " " +  first_skill.currentProgress
 	//		+ " Last Skill:" + last_skill.shortName + " " +  last_skill_progress);
-	// log("Segment length: " + active_segment + " Step: " + active_step.toFixed(4));
+	//debug("Segment length: " + active_segment + " Step: " + active_step.toFixed(4));
 
 	const step = Math.max(Math.min(active_step, max_step), min_step);
 
-	// log("Step:" + step);
+	//debug("Step:" + step);
 	active_skills.forEach(applyStep, { step: step });
 
 	// Complete skills in unlocked rows sequentially
@@ -227,10 +231,10 @@ function updateCrownLevel(local_config) {
 	}
 	var max_weight = active_skills.sort((a, b) =>
 			{return b.crownWeight - a.crownWeight; }).slice(0,5);
-	// log(max_weight);
+	//debug(max_weight);
 	var next_skill = max_weight[chi_rnumber(max_weight.length)];
-	// log("Next skill: " + next_skill.shortName);
-	// log(skills);
+	//debug("Next skill: " + next_skill.shortName);
+	//debug(skills);
 	return next_skill;
 }
 
@@ -241,7 +245,7 @@ function updateCrownLevel(local_config) {
 // skills.forEach(x => res = {w: x.crownWeight, n: x.shortName})
 // skills.forEach(x => res = {w: x.crownWeight, t: x.targetCrownLevel, c: x.currentProgress, n: x.shortName })
 // var totalLessons = skills.map(x => x.lessons).reduce((a, b) => a + b, 0);
-// log("Total visible lessons: " + totalLessons);
+// debug("Total visible lessons: " + totalLessons);
 // skills.filter( (skill, i, a) => i > 0 ? skill.row != a[i - 1].row : true ).map(skill => skill.targetCrownLevel)
 
 // --------------------------------------
@@ -249,7 +253,7 @@ function updateCrownLevel(local_config) {
 // --------------------------------------
 
 function removeObsoleteNextLessonButton() {
-	// log("removeObsoleteNextLessonButton");
+	//debug("removeObsoleteNextLessonButton");
 	var button = document.getElementById(K_NEXT_LESSON_BUTTON_ID);
 	if (button != null) {
 		getPracticeAnchor().parentElement.removeChild(button);
@@ -257,7 +261,7 @@ function removeObsoleteNextLessonButton() {
 }
 
 function createLessonButton(skill) {
-	// log("createLessonButton");
+	//debug("createLessonButton");
 	removeObsoleteNextLessonButton();
 
 	// prepare the next lesson button
@@ -279,6 +283,7 @@ function tagAllSkills() {
 	var skill_names = Array.prototype.slice.call(document.getElementsByClassName(K_SHORT_NAME));
 	var skill_index = 0;
 	skill_names.forEach(skill => {
+		// Ignore bonus skills
 		if (skill.textContent == skills[skill_index].shortName) {
 			skills[skill_index].shortNameElement = skill;
 			skill_index++;
@@ -346,7 +351,7 @@ function toDoNextSkills(next_skill, move_cracked_skills) {
 }
 
 function findNextLesson() {
-	// log("findNextLesson");
+	//debug("findNextLesson");
 	// Remove all old elements
 	var to_remove = document.getElementsByClassName("duolingonextlesson");
 	while (to_remove[0]) {
@@ -372,13 +377,13 @@ function onChangeNextLesson(mutationsList) {
 
 	/* Add a "NEXT LESSON" button when necessary */
 	if (getDuoTree() != null) {
-		// log("There is a tree");
+		//debug("There is a tree");
 		if (document.getElementById(K_FIRST_SKILL_ITEM_ID) == null) {
-			// log("Find next lesson");
+			//debug("Find next lesson");
 			findNextLesson();
 		}
 	} else {
-		// log("There is a change but no tree");
+		//debug("There is a change but no tree");
 	}
 
 	/* List the number of lessons missing in the current level */
@@ -386,7 +391,7 @@ function onChangeNextLesson(mutationsList) {
 		var mutation = mutationsList[i];
 		if (mutation.type === 'childList') {
 			// var target = mutation.target;
-			// log(target.className);
+			//debug(target.className);
 		}
 	}
 }
@@ -396,4 +401,4 @@ new MutationObserver(onChangeNextLesson).observe(document.body, {
 	subtree: true
 });
 
-log("version " + GM_info.script.version + " ready");
+info("version " + GM_info.script.version + " ready");
