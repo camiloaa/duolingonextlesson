@@ -4,7 +4,7 @@
 // @include     https://www.duolingo.com/*
 // @include     https://preview.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.3.6
+// @version     1.3.7
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @copyright   2018+ Camilo Arboleda
 // @license     https://github.com/camiloaa/duolingonextlesson/raw/master/LICENSE
@@ -19,8 +19,7 @@ let K_DUO_TREE_DATA_TEST = "skill-tree";
 let K_SKILL_DATA_TEST = "skill";
 let K_PRACTICE_BUTTON_DATA_TEST = "global-practice";
 let K_TREE_SECTION_DATA_TEST = "tree-section";
-// Some elements remain hard-coded for compatibility reasons
-let K_SHORT_NAME = "Mr3if _2OhdT _1V15X _3PSt5";
+// Button class remain hard-coded for compatibility reasons with small screens
 let K_BUTTON_CLASS = "_2Jb7i _3iVqs _2A7uO _2gwtT _1nlVc _2fOC9 t5wFJ _3dtSu _25Cnc _3yAjN _3Ev3S _1figt";
 
 let K_PLUGIN_NAME = "DuolingoNextLesson";
@@ -95,9 +94,18 @@ function getFirstElementByDataTestValue(data_test) {
 	return document.querySelector("*[data-test='" + data_test + "']");
 }
 
+function getElementsByDataTestValue(data_test) {
+    return document.querySelectorAll("[data-test='" + data_test + "']");
+}
+
 function getDuoTree() {
 	// <div data-test="skill-tree" class="nae5G">
 	return getFirstElementByDataTestValue(K_DUO_TREE_DATA_TEST);
+}
+
+function getSkills() {
+	// <div class="_2iiJH _1DMov" data-test="skill">
+	return getElementsByDataTestValue(K_SKILL_DATA_TEST);
 }
 
 function getFirstSkill() {
@@ -280,12 +288,16 @@ function createLessonButton(skill) {
 }
 
 function tagAllSkills() {
-	var skill_names = Array.prototype.slice.call(document.getElementsByClassName(K_SHORT_NAME));
+	const skill_nodes = Array.prototype.slice.call(getSkills());
 	var skill_index = 0;
-	skill_names.forEach(skill => {
+	skill_nodes.forEach(skill => {
+		var all_div = skill.getElementsByTagName("div")
+		skill_name = all_div[all_div.length - 1];
+		//debug(skill_name.textContent);
+		//debug(skill_name);
 		// Ignore bonus skills
-		if (skill.textContent == skills[skill_index].shortName) {
-			skills[skill_index].shortNameElement = skill;
+		if (skill_name.textContent == skills[skill_index].shortName) {
+			skills[skill_index].shortNameElement = skill_name;
 			skill_index++;
 		}
 	})
@@ -315,8 +327,7 @@ function skillURL(skill) {
 
 /* Move all cracked skills to a new section at the beginning of the tree */
 function toDoNextSkills(next_skill, move_cracked_skills) {
-	var cracked_skills = skills.filter(skill =>skill.decayed == true)
-			.map(skill => skill.shortNameElement.parentN(3));
+	var cracked_skills = skills.filter(skill =>skill.decayed == true).map(skill => skill.shortNameElement.parentN(3));
 	cracked_skills.push(next_skill); // Include also next_skill
 	let c_size = 3;
 	var cracked_chunks = Array(Math.ceil(cracked_skills.length / c_size))
@@ -357,7 +368,7 @@ function findNextLesson() {
 	while (to_remove[0]) {
 		to_remove[0].parentNode.removeChild(to_remove[0]);
 	}
-	document.getElementsByClassName(K_SHORT_NAME)[0].parentNode.id = K_FIRST_SKILL_ITEM_ID;
+	getFirstSkill().firstChild.id = K_FIRST_SKILL_ITEM_ID;
 
 	// Find the next lesson to study
 	readDuoState();
