@@ -4,7 +4,7 @@
 // @include     https://www.duolingo.com/*
 // @include     https://preview.duolingo.com/*
 // @author      Camilo Arboleda
-// @version     1.3.7
+// @version     1.3.8
 // @description Add a "START LESSON" button in Duolingo. Check the README for more magic
 // @copyright   2018+ Camilo Arboleda
 // @license     https://github.com/camiloaa/duolingonextlesson/raw/master/LICENSE
@@ -20,7 +20,7 @@ let K_SKILL_DATA_TEST = "skill";
 let K_PRACTICE_BUTTON_DATA_TEST = "global-practice";
 let K_TREE_SECTION_DATA_TEST = "tree-section";
 // Button class remain hard-coded for compatibility reasons with small screens
-let K_BUTTON_CLASS = "_2Jb7i _3iVqs _2A7uO _2gwtT _1nlVc _2fOC9 t5wFJ _3dtSu _25Cnc _3yAjN _3Ev3S _1figt";
+let K_BUTTON_CLASS = "_3HHNB _2A7uO _2gwtT _1nlVc _2fOC9 t5wFJ _3dtSu _25Cnc _3yAjN _3Ev3S _1figt";
 
 let K_PLUGIN_NAME = "DuolingoNextLesson";
 let K_FIRST_SKILL_ITEM_ID = "skill-tree-first-item";
